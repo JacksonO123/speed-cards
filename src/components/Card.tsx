@@ -9,6 +9,7 @@ type CardProps = {
     num: number;
     suit: Suit;
     width?: number;
+    className?: string;
 
     onClick?: () => void;
 };
@@ -19,6 +20,7 @@ export default function Card({
     num,
     suit,
     width = defaultWidth,
+    className,
     onClick,
 }: CardProps) {
     const imgMap: Record<Suit, string> = {
@@ -46,22 +48,26 @@ export default function Card({
         }
     };
 
-    const NumComp = () => <span className="text-3xl">{formatNum(num)}</span>;
+    const NumComp = () => <span class="w-fit">{formatNum(num)}</span>;
 
     const SuitComp = ({
-        size,
+        maxSize,
         className,
     }: {
-        size: number;
+        maxSize?: number;
         className?: string;
     }) => (
         <img
             src={imgMap[suit]}
-            className={className}
+            class={twMerge(className, "max-w-full")}
             style={{
-                width: `${size}px`,
-                minWidth: `${size}px`,
-                maxWidth: `${size}px`,
+                ...(maxSize
+                    ? {
+                          width: `${maxSize}px`,
+                          "min-width": `${maxSize}px`,
+                          "max-width": `${maxSize}px`,
+                      }
+                    : {}),
                 height: "auto",
             }}
         />
@@ -69,9 +75,9 @@ export default function Card({
 
     const MiddleCol = () => (
         <div
-            className={twMerge(
-                "w-full flex flex-col justify-between items-center my-4",
-                num === 7 && "pb-24",
+            class={twMerge(
+                "w-full flex flex-col justify-between items-center my-[0.6em]",
+                num === 7 && "pb-[2.5em]",
                 num === 10
                     ? "justify-evenly"
                     : num > 1 && num <= 3
@@ -82,14 +88,14 @@ export default function Card({
             {num <= 3 ? (
                 Array(num)
                     .fill(null)
-                    .map((_, index) => <SuitComp key={index} size={40} />)
+                    .map(() => <SuitComp />)
             ) : num % 2 !== 0 ? (
-                <SuitComp size={40} />
+                <SuitComp />
             ) : num === 10 ? (
                 <>
-                    <SuitComp size={40} />
+                    <SuitComp />
                     <div></div>
-                    <SuitComp size={40} className="rotate-180" />
+                    <SuitComp className="rotate-180" />
                 </>
             ) : null}
         </div>
@@ -100,9 +106,8 @@ export default function Card({
 
         return (
             <div
-                className={twMerge(
-                    "w-full flex flex-col justify-between items-center",
-                    "my-4",
+                class={twMerge(
+                    "w-full flex flex-col justify-between items-center my-[0.6em]",
                     length > 1 ? "justify-between" : "justify-center",
                 )}
             >
@@ -110,8 +115,6 @@ export default function Card({
                     .fill(null)
                     .map((_, index) => (
                         <SuitComp
-                            key={index}
-                            size={40}
                             className={
                                 index >= length / 2 ? "rotate-180" : undefined
                             }
@@ -123,28 +126,32 @@ export default function Card({
 
     return (
         <div
-            className="border-2 border-gray-300 w-[225px] h-[300px] rounded-lg flex justify-between p-1 gap-1 cursor-pointer select-none shadow-xs"
+            class={twMerge(
+                "border-2 border-gray-300 w-[225px] h-[300px] rounded-lg flex justify-between px-[1.3em] gap-1 cursor-pointer select-none shadow-xs relative",
+                className,
+            )}
             onClick={() => onClick?.()}
             style={{
                 width: `${width}px`,
-                minWidth: `${width}px`,
-                maxWidth: `${width}px`,
+                "min-width": `${width}px`,
+                "max-width": `${width}px`,
                 height: `${height}px`,
-                minHeight: `${height}px`,
-                maxHeight: `${height}px`,
+                "min-height": `${height}px`,
+                "max-height": `${height}px`,
+                "font-size": `${width / 100}em`,
             }}
         >
-            <div className="h-full flex flex-col pl-2 w-10 min-w-10 max-w-10">
+            <div class="h-full flex flex-col pl-2 absolute left-0 top-0">
                 <NumComp />
-                <SuitComp size={20} />
+                <SuitComp className="w-[0.75em]" />
             </div>
-            <div className="w-full flex">
+            <div class="w-full flex">
                 <SideCol />
                 <MiddleCol />
                 <SideCol />
             </div>
-            <div className="h-full flex flex-col items-end justify-end pr-2 w-10 min-w-10 max-w-10">
-                <SuitComp size={20} />
+            <div class="h-full flex flex-col items-end justify-end pr-2 absolute right-0 bottom-0">
+                <SuitComp className="w-[0.75em]" />
                 <NumComp />
             </div>
         </div>

@@ -1,5 +1,3 @@
-import { useEffect, useMemo, useState } from "react";
-import "./App.css";
 import {
     type Card as CardType,
     type GameState,
@@ -8,6 +6,7 @@ import {
     type Suit,
 } from "./types/types";
 import Card from "./components/Card";
+import { createSignal } from "solid-js";
 
 type DeckMap = Map<string, number>;
 
@@ -16,8 +15,11 @@ const NOT_PLACING = 0;
 function App() {
     const numPlayerCards = 4;
     const numDecks = 1;
+    const currentPlayerNum = 1;
 
-    const initial = useMemo(() => generateInitial(numDecks), []);
+    const [gameState, setGameState] = createSignal(generateInitial(numDecks));
+    const [matches, setMatches] = createSignal(getMatches());
+    const [currentPlacing, setCurrentPlacing] = createSignal(NOT_PLACING);
 
     function generateInitial(numDecks: number): GameState {
         const res: GameState = { wonBy: null, cardState: [] };
@@ -79,21 +81,11 @@ function App() {
         };
     }
 
-    const [gameState, setGameState] = useState(initial);
-    const [matches, setMatches] = useState<MatchInfo[]>([]);
-    // 0 for nothing, card number if placed on that card last
-    const [currentPlacing, setCurrentPlacing] = useState(NOT_PLACING);
-
-    useEffect(() => {
-        const firstMatches = getMatches();
-        setMatches(firstMatches);
-    }, []);
-
     function getMatches(): MatchInfo[] {
         const idSet = new Set<string>();
         const matches: MatchInfo[] = [];
-        const allCards = gameState.cardState
-            .map((player) => player.side)
+        const allCards = gameState()
+            .cardState.map((player) => player.side)
             .flat();
 
         for (let i = 0; i < allCards.length; i++) {
@@ -114,76 +106,78 @@ function App() {
         return [...matches];
     }
 
-    function handleCardClick(playerNum: number, index: number, id: string) {
-        console.log(id);
-        let currentMatches = matches;
-        const card = gameState.cardState[playerNum].side[index];
+    function handleCardClick(playerNum: number, id: string) {
+        const card = gameState().cardState[playerNum].side.find(
+            (item) => item.id === id,
+        )!;
 
-        if (currentPlacing === NOT_PLACING || currentPlacing !== card.number) {
+        if (
+            currentPlacing() === NOT_PLACING ||
+            currentPlacing() !== card.number
+        ) {
             const newMatches = getMatches();
             setMatches(newMatches);
             setCurrentPlacing(card.number);
-            currentMatches = newMatches;
         }
 
-        const includesCard = currentMatches.find(
+        const includesCard = matches().find(
             (item) => item.number === card.number && item.id === card.id,
         );
         if (!includesCard) return;
 
-        setGameState((state) => {
-            state.cardState[playerNum].hand = [
-                ...state.cardState[playerNum].hand,
-            ];
-            console.log("here");
-            const fromHand = state.cardState[playerNum].hand.pop();
-            if (fromHand === undefined) return state;
-            state.cardState[playerNum].side[index] = fromHand;
-            state.cardState[playerNum].side = [
-                ...state.cardState[playerNum].side,
-            ];
-            state.cardState = [...state.cardState];
+        const newGameState = gameState();
+        for (
+            let i = 0;
+            i < newGameState.cardState[playerNum].side.length;
+            i++
+        ) {
+            if (newGameState.cardState[playerNum].side[i].id === id) {
+                const fromHand =
+                    newGameState.cardState[currentPlayerNum].hand.pop()!;
+                if (
+                    newGameState.cardState[currentPlayerNum].hand.length === 0
+                ) {
+                    newGameState.wonBy = playerNum;
+                    setGameState({ ...newGameState });
+                    return;
+                }
+                newGameState.cardState[playerNum].side[i] = fromHand;
+            }
+        }
 
-            return { ...state };
-        });
+        setGameState({ ...newGameState });
     }
 
-    console.log(gameState.cardState[1].hand);
-
     return (
-        <main className="flex justify-center items-center h-screen">
-            {gameState.wonBy !== null ? (
-                <h1>won by {gameState.wonBy}</h1>
+        <main class="flex justify-center items-center h-screen">
+            {gameState().wonBy !== null ? (
+                <h1>won by {gameState().wonBy}</h1>
             ) : (
                 <>
-                    <div className="flex flex-col gap-24">
-                        <div className="flex gap-8">
-                            {gameState.cardState[0].side.map((card, index) => (
+                    <div class="flex flex-col gap-24">
+                        <div class="flex gap-8">
+                            {gameState().cardState[0].side.map((card) => (
                                 <Card
-                                    key={`player-1-card-${index}`}
                                     num={card.number}
                                     suit={card.suit}
-                                    onClick={() =>
-                                        handleCardClick(0, index, card.id)
-                                    }
+                                    width={120}
+                                    onClick={() => handleCardClick(0, card.id)}
                                 />
                             ))}
                         </div>
-                        <div className="flex gap-8">
-                            {gameState.cardState[1].side.map((card, index) => (
+                        <div class="flex gap-8">
+                            {gameState().cardState[1].side.map((card) => (
                                 <Card
-                                    key={`player-2-card-${index}`}
                                     num={card.number}
                                     suit={card.suit}
-                                    onClick={() =>
-                                        handleCardClick(1, index, card.id)
-                                    }
+                                    width={120}
+                                    onClick={() => handleCardClick(1, card.id)}
                                 />
                             ))}
                         </div>
                     </div>
-                    <div className="absolute left-0 bottom-0 text-5xl">
-                        {gameState.cardState[1].hand.length}
+                    <div class="absolute left-0 bottom-0 text-5xl">
+                        {gameState().cardState[currentPlayerNum].hand.length}
                     </div>
                 </>
             )}
