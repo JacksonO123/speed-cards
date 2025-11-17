@@ -43,13 +43,8 @@ type CardSrcData<T> = T extends Suit ? string : SuitInfo;
 
 const defaultWidth = 225;
 
-export default function Card({
-    num,
-    suit,
-    width = defaultWidth,
-    className,
-    onClick,
-}: CardProps) {
+export default function Card(props: CardProps) {
+    props.width = props.width ?? defaultWidth;
     const imgMap: Record<
         Suit | FaceNumbers,
         CardSrcData<Suit | FaceNumbers>
@@ -79,7 +74,7 @@ export default function Card({
     };
 
     const widthToHeightRatio = 300 / 225;
-    const height = widthToHeightRatio * width;
+    const height = widthToHeightRatio * props.width;
 
     const formatNum = (num: number) => {
         switch (num) {
@@ -96,7 +91,7 @@ export default function Card({
         }
     };
 
-    const NumComp = () => <span class="w-fit">{formatNum(num)}</span>;
+    const NumComp = () => <span class="w-fit">{formatNum(props.num)}</span>;
 
     const SuitComp = ({
         maxSize,
@@ -106,7 +101,7 @@ export default function Card({
         className?: string;
     }) => (
         <img
-            src={imgMap[suit] as string}
+            src={imgMap[props.suit] as string}
             class={twMerge(className, "max-w-full")}
             style={{
                 ...(maxSize
@@ -125,26 +120,30 @@ export default function Card({
         <div
             class={twMerge(
                 "w-full flex flex-col justify-between items-center my-[0.6em]",
-                num === 7 && "pb-[2.75em]",
-                num === 10
+                props.num === 7 && "pb-[2.75em]",
+                props.num === 10
                     ? "justify-evenly"
-                    : num > 1 && num <= 3
+                    : props.num > 1 && props.num <= 3
                       ? "justify-between"
                       : "justify-center",
             )}
         >
-            {num > 10 ? (
+            {props.num > 10 ? (
                 <img
-                    src={(imgMap[num as FaceNumbers] as SuitInfo)[suit]}
+                    src={
+                        (imgMap[props.num as FaceNumbers] as SuitInfo)[
+                            props.suit
+                        ]
+                    }
                     class="border-2 border-sky-700"
                 />
-            ) : num <= 3 ? (
-                Array(num)
+            ) : props.num <= 3 ? (
+                Array(props.num)
                     .fill(null)
                     .map(() => <SuitComp />)
-            ) : num % 2 !== 0 ? (
+            ) : props.num % 2 !== 0 ? (
                 <SuitComp />
-            ) : num === 10 ? (
+            ) : props.num === 10 ? (
                 <>
                     <SuitComp />
                     <div></div>
@@ -155,9 +154,10 @@ export default function Card({
     );
 
     const SideCol = () => {
-        const length = num > 3 ? Math.min(Math.floor(num / 2), 4) : 0;
+        const length =
+            props.num > 3 ? Math.min(Math.floor(props.num / 2), 4) : 0;
 
-        return num <= 10 ? (
+        return props.num <= 10 ? (
             <div
                 class={twMerge(
                     "w-full flex flex-col justify-between items-center my-[0.6em]",
@@ -181,17 +181,17 @@ export default function Card({
         <div
             class={twMerge(
                 "border-2 border-gray-300 w-[225px] h-[300px] rounded-lg flex justify-between px-[1.35em] gap-1 cursor-pointer select-none shadow-xs relative",
-                className,
+                props.className,
             )}
-            onClick={() => onClick?.()}
+            onClick={() => props.onClick?.()}
             style={{
-                width: `${width}px`,
-                "min-width": `${width}px`,
-                "max-width": `${width}px`,
+                width: `${props.width}px`,
+                "min-width": `${props.width}px`,
+                "max-width": `${props.width}px`,
                 height: `${height}px`,
                 "min-height": `${height}px`,
                 "max-height": `${height}px`,
-                "font-size": `${width / 110}em`,
+                "font-size": `${props.width / 110}em`,
             }}
         >
             <div class="h-full flex flex-col items-center pl-[0.25em] absolute left-0 top-0">

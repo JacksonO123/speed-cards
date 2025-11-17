@@ -7,6 +7,8 @@ import {
 } from "./types/types";
 import Card from "./components/Card";
 import { createSignal } from "solid-js";
+import Alerts from "./components/Alerts";
+import { useAlerts } from "./hooks/useAlerts";
 
 type DeckMap = Map<string, number>;
 
@@ -16,10 +18,12 @@ function App() {
     const numPlayerCards = 4;
     const numDecks = 1;
     const currentPlayerNum = 1;
+    const oppPlayerNum = 0;
 
     const [gameState, setGameState] = createSignal(generateInitial(numDecks));
     const [matches, setMatches] = createSignal(getMatches());
     const [currentPlacing, setCurrentPlacing] = createSignal(NOT_PLACING);
+    const [alerts, addAlert] = useAlerts();
 
     function generateInitial(numDecks: number): GameState {
         const res: GameState = { wonBy: null, cardState: [] };
@@ -37,8 +41,12 @@ function App() {
             player2.hand.push(card2);
         }
 
-        player1.side = player1.hand.splice(0, numPlayerCards);
-        player2.side = player2.hand.splice(0, numPlayerCards);
+        player1.side = player1.hand
+            .splice(0, numPlayerCards)
+            .map((card) => [card]);
+        player2.side = player2.hand
+            .splice(0, numPlayerCards)
+            .map((card) => [card]);
 
         res.cardState.push(player1, player2);
 
@@ -92,11 +100,13 @@ function App() {
             for (let j = 0; j < allCards.length; j++) {
                 if (i === j) continue;
 
-                if (allCards[i].number == allCards[j].number) {
-                    if (!idSet.has(allCards[i].id)) {
+                const topICard = allCards[i][allCards[i].length - 1];
+                const topJCard = allCards[j][allCards[j].length - 1];
+                if (topICard.number == topJCard.number) {
+                    if (!idSet.has(topICard.id)) {
                         matches.push({
-                            number: allCards[i].number,
-                            id: allCards[i].id,
+                            number: topICard.number,
+                            id: topICard.id,
                         });
                     }
                 }
@@ -107,9 +117,10 @@ function App() {
     }
 
     function handleCardClick(playerNum: number, id: string) {
-        const card = gameState().cardState[playerNum].side.find(
-            (item) => item.id === id,
+        const cardStack = gameState().cardState[playerNum].side.find(
+            (item) => item[item.length - 1].id === id,
         )!;
+        const card = cardStack[cardStack.length - 1];
 
         if (
             currentPlacing() === NOT_PLACING ||
@@ -131,21 +142,53 @@ function App() {
             i < newGameState.cardState[playerNum].side.length;
             i++
         ) {
-            if (newGameState.cardState[playerNum].side[i].id === id) {
+            const cardStack = newGameState.cardState[playerNum].side[i];
+            if (cardStack[cardStack.length - 1].id === id) {
                 const fromHand =
                     newGameState.cardState[currentPlayerNum].hand.pop()!;
                 if (
                     newGameState.cardState[currentPlayerNum].hand.length === 0
                 ) {
-                    newGameState.wonBy = playerNum;
+                    newGameState.wonBy = currentPlayerNum;
                     setGameState({ ...newGameState });
                     return;
                 }
-                newGameState.cardState[playerNum].side[i] = fromHand;
+                newGameState.cardState[playerNum].side[i].push(fromHand);
             }
         }
 
         setGameState({ ...newGameState });
+    }
+
+    function tryNewCards() {
+        const newMatches = getMatches();
+        setMatches(newMatches);
+        if (matches().length > 0) {
+            addAlert("There are still matches");
+            return;
+        }
+
+        const currentGameState = gameState();
+
+        const player1Hand = currentGameState.cardState[currentPlayerNum].hand;
+        const player1Top4 = player1Hand.splice(player1Hand.length - 4, 4);
+        player1Hand.unshift(
+            ...currentGameState.cardState[currentPlayerNum].side.flat(),
+        );
+        currentGameState.cardState[currentPlayerNum].side = player1Top4.map(
+            (card) => [card],
+        );
+
+        const player2Hand = currentGameState.cardState[oppPlayerNum].hand;
+        const player2Top4 = player2Hand.splice(player2Hand.length - 4, 4);
+        player2Hand.unshift(
+            ...currentGameState.cardState[oppPlayerNum].side.flat(),
+        );
+        currentGameState.cardState[oppPlayerNum].side = player2Top4.map(
+            (card) => [card],
+        );
+
+        setGameState({ ...currentGameState });
     }
 
     return (
@@ -156,29 +199,48 @@ function App() {
                 <>
                     <div class="flex flex-col gap-24">
                         <div class="flex gap-8">
-                            {gameState().cardState[0].side.map((card) => (
+                            {gameState().cardState[0].side.map((cards) => (
                                 <Card
-                                    num={card.number}
-                                    suit={card.suit}
+                                    num={cards[cards.length - 1].number}
+                                    suit={cards[cards.length - 1].suit}
                                     width={120}
-                                    onClick={() => handleCardClick(0, card.id)}
+                                    onClick={() =>
+                                        handleCardClick(
+                                            0,
+                                            cards[cards.length - 1].id,
+                                        )
+                                    }
                                 />
                             ))}
                         </div>
                         <div class="flex gap-8">
-                            {gameState().cardState[1].side.map((card) => (
+                            {gameState().cardState[1].side.map((cards) => (
                                 <Card
-                                    num={card.number}
-                                    suit={card.suit}
+                                    num={cards[cards.length - 1].number}
+                                    suit={cards[cards.length - 1].suit}
                                     width={120}
-                                    onClick={() => handleCardClick(1, card.id)}
+                                    onClick={() =>
+                                        handleCardClick(
+                                            1,
+                                            cards[cards.length - 1].id,
+                                        )
+                                    }
                                 />
                             ))}
+                        </div>
+                        <div class="flex justify-center">
+                            <button
+                                onClick={tryNewCards}
+                                class="bg-neutral-200 px-8 py-4 rounded-xl cursor-pointer border-2 border-neutral-400 text-neutral-500 duration-150 hover:text-neutral-600 hover:border-neutral-500"
+                            >
+                                No Matches
+                            </button>
                         </div>
                     </div>
                     <div class="absolute left-4 bottom-4 text-5xl">
                         {gameState().cardState[currentPlayerNum].hand.length}
                     </div>
+                    <Alerts alerts={alerts()} />
                 </>
             )}
         </main>

@@ -1,0 +1,33 @@
+.shrink-height {
+    height: 0px;
+    margin-top: 0px;
+    transform: translate(45rem);
+    animation: 500ms ease-in shrinkHeight;
+}
+
+.fade-out {
+    opacity: 0;
+    animation: 500ms ease-in fadeOut;
+}
+
+@keyframes shrinkHeight {
+    from {
+        height: 58px;
+        margin-top: 16px;
+        transform: translate(0rem);
+    }
+    to {
+        height: 0px;
+        margin-top: 0;
+        transform: translate(45rem);
+    }
+}
+
+@keyframes fadeOut {
+    from {
+        opacity: 1;
+    }
+    to {
+        opacity: 0;
+    }
+}

@@ -13,10 +13,16 @@ export type MatchInfo = {
 
 export type PlayerState = {
     hand: Card[];
-    side: Card[];
+    side: Card[][];
 };
 
 export type GameState = {
     wonBy: number | null;
     cardState: PlayerState[];
+};
+
+export type AlertType = {
+    id: string;
+    msg: string;
+    active: boolean;
 };
