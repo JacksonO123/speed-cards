@@ -3,21 +3,33 @@ import heartsSrc from "../assets/heart.png";
 import diamondsSrc from "../assets/diamonds.png";
 import spadesSrc from "../assets/spades.svg";
 import { twMerge } from "tailwind-merge";
-
-type Suit = "clubs" | "hearts" | "diamonds" | "spades";
+import type { Suit } from "../types/types";
 
 type CardProps = {
     num: number;
     suit: Suit;
+    width?: number;
+
+    onClick?: () => void;
 };
 
-export default function Card({ num, suit }: CardProps) {
+const defaultWidth = 225;
+
+export default function Card({
+    num,
+    suit,
+    width = defaultWidth,
+    onClick,
+}: CardProps) {
     const imgMap: Record<Suit, string> = {
         clubs: clubsSrc,
         hearts: heartsSrc,
         diamonds: diamondsSrc,
         spades: spadesSrc,
     };
+
+    const widthToHeightRatio = 300 / 225;
+    const height = widthToHeightRatio * width;
 
     const formatNum = (num: number) => {
         switch (num) {
@@ -70,7 +82,7 @@ export default function Card({ num, suit }: CardProps) {
             {num <= 3 ? (
                 Array(num)
                     .fill(null)
-                    .map(() => <SuitComp size={40} />)
+                    .map((_, index) => <SuitComp key={index} size={40} />)
             ) : num % 2 !== 0 ? (
                 <SuitComp size={40} />
             ) : num === 10 ? (
@@ -98,6 +110,7 @@ export default function Card({ num, suit }: CardProps) {
                     .fill(null)
                     .map((_, index) => (
                         <SuitComp
+                            key={index}
                             size={40}
                             className={
                                 index >= length / 2 ? "rotate-180" : undefined
@@ -109,7 +122,18 @@ export default function Card({ num, suit }: CardProps) {
     };
 
     return (
-        <div className="border-2 border-gray-300 w-[225px] h-[300px] rounded-lg flex justify-between p-1 gap-1">
+        <div
+            className="border-2 border-gray-300 w-[225px] h-[300px] rounded-lg flex justify-between p-1 gap-1 cursor-pointer select-none shadow-xs"
+            onClick={() => onClick?.()}
+            style={{
+                width: `${width}px`,
+                minWidth: `${width}px`,
+                maxWidth: `${width}px`,
+                height: `${height}px`,
+                minHeight: `${height}px`,
+                maxHeight: `${height}px`,
+            }}
+        >
             <div className="h-full flex flex-col pl-2 w-10 min-w-10 max-w-10">
                 <NumComp />
                 <SuitComp size={20} />
