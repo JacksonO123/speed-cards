@@ -23,7 +23,8 @@ function App() {
     const cpuSecondMoveTimeout = 1; // seconds
 
     const [gameState, setGameState] = createSignal(generateInitial(numDecks));
-    const [matches, setMatches] = createSignal(getMatches());
+    const [cpuMatches, setCpuMatches] = createSignal(getMatches());
+    const [playerMatches, setPlayerMatches] = createSignal(getMatches());
     const [currentPlacing, setCurrentPlacing] = createSignal(NOT_PLACING);
     const [alerts, addAlert] = useAlerts();
 
@@ -129,11 +130,11 @@ function App() {
             currentPlacing() !== card.number
         ) {
             const newMatches = getMatches();
-            setMatches(newMatches);
+            setPlayerMatches(newMatches);
             setCurrentPlacing(card.number);
         }
 
-        const includesCard = matches().find(
+        const includesCard = [...playerMatches(), ...cpuMatches()].find(
             (item) => item.number === card.number && item.id === card.id,
         );
         if (!includesCard) return;
@@ -165,8 +166,8 @@ function App() {
 
     function tryNewCards() {
         const newMatches = getMatches();
-        setMatches(newMatches);
-        if (matches().length > 0) {
+        setPlayerMatches(newMatches);
+        if (playerMatches().length > 0) {
             addAlert("There are still matches");
             return;
         }
@@ -222,7 +223,8 @@ function App() {
     }
 
     function cpuMakeMove() {
-        const currentMatches = randomizeArr(getMatches());
+        setCpuMatches(getMatches());
+        const currentMatches = randomizeArr(cpuMatches());
         if (currentMatches.length === 0) return;
 
         const first =
