@@ -5,16 +5,17 @@ import {
     type PlayerState,
     type Suit,
 } from "./types/types";
-import Card from "./components/Card";
-import { createSignal, onCleanup, onMount } from "solid-js";
+import { createEffect, createSignal, onCleanup, onMount } from "solid-js";
 import Alerts from "./components/Alerts";
 import { useAlerts } from "./hooks/useAlerts";
+import CardPile from "./components/CardPile";
 
 type DeckMap = Map<string, number>;
 
 const NOT_PLACING = 0;
 
 function App() {
+    const cardWidth = 180;
     const numPlayerCards = 4;
     const numDecks = 1;
     const currentPlayerNum = 1;
@@ -25,8 +26,12 @@ function App() {
     const [gameState, setGameState] = createSignal(generateInitial(numDecks));
     const [cpuMatches, setCpuMatches] = createSignal(getMatches());
     const [playerMatches, setPlayerMatches] = createSignal(getMatches());
-    const [currentPlacing, setCurrentPlacing] = createSignal(NOT_PLACING);
+    const [currentPlacing, setCurrentPlacing] = createSignal<MatchInfo>({
+        number: NOT_PLACING,
+        id: "",
+    });
     const [alerts, addAlert] = useAlerts();
+    const [cpuInterval, setCpuInterval] = createSignal(-1);
 
     function generateInitial(numDecks: number): GameState {
         const res: GameState = { wonBy: null, cardState: [] };
@@ -89,6 +94,7 @@ function App() {
             id: crypto.randomUUID(),
             number: +parts[1],
             suit: parts[0] as Suit,
+            cpuPlaced: false,
         };
     }
 
@@ -120,18 +126,23 @@ function App() {
     }
 
     function handleCardClick(playerNum: number, id: string) {
+        if (currentPlacing().id === id) return;
+
         const cardStack = gameState().cardState[playerNum].side.find(
             (item) => item[item.length - 1].id === id,
         )!;
         const card = cardStack[cardStack.length - 1];
 
         if (
-            currentPlacing() === NOT_PLACING ||
-            currentPlacing() !== card.number
+            currentPlacing().number === NOT_PLACING ||
+            currentPlacing().number !== card.number
         ) {
             const newMatches = getMatches();
             setPlayerMatches(newMatches);
-            setCurrentPlacing(card.number);
+            setCurrentPlacing((prev) => {
+                prev.number = card.number;
+                return { ...prev };
+            });
         }
 
         const includesCard = [...playerMatches(), ...cpuMatches()].find(
@@ -147,8 +158,10 @@ function App() {
         ) {
             const cardStack = newGameState.cardState[playerNum].side[i];
             if (cardStack[cardStack.length - 1].id === id) {
+                resetCpuPutCards(newGameState);
                 const fromHand =
                     newGameState.cardState[currentPlayerNum].hand.pop()!;
+                fromHand.cpuPlaced = false;
                 newGameState.cardState[playerNum].side[i].push(fromHand);
 
                 if (
@@ -166,8 +179,7 @@ function App() {
 
     function tryNewCards() {
         const newMatches = getMatches();
-        setPlayerMatches(newMatches);
-        if (playerMatches().length > 0) {
+        if (newMatches.length > 0) {
             addAlert("There are still matches");
             return;
         }
@@ -175,21 +187,27 @@ function App() {
         const currentGameState = gameState();
 
         const player1Hand = currentGameState.cardState[currentPlayerNum].hand;
-        const player1Top4 = player1Hand.splice(player1Hand.length - 4, 4);
         player1Hand.unshift(
             ...currentGameState.cardState[currentPlayerNum].side.flat(),
         );
+        const player1Top4 = player1Hand.splice(player1Hand.length - 4, 4);
         currentGameState.cardState[currentPlayerNum].side = player1Top4.map(
-            (card) => [card],
+            (card) => {
+                card.cpuPlaced = false;
+                return [card];
+            },
         );
 
         const player2Hand = currentGameState.cardState[oppPlayerNum].hand;
-        const player2Top4 = player2Hand.splice(player2Hand.length - 4, 4);
         player2Hand.unshift(
             ...currentGameState.cardState[oppPlayerNum].side.flat(),
         );
+        const player2Top4 = player2Hand.splice(player2Hand.length - 4, 4);
         currentGameState.cardState[oppPlayerNum].side = player2Top4.map(
-            (card) => [card],
+            (card) => {
+                card.cpuPlaced = false;
+                return [card];
+            },
         );
 
         setGameState({ ...currentGameState });
@@ -204,8 +222,10 @@ function App() {
         for (let i = 0; i < allStacks.length; i++) {
             const topICard = allStacks[i][allStacks[i].length - 1];
             if (topICard.id === cardId) {
+                resetCpuPutCards(newGameState);
                 const hand = newGameState.cardState[oppPlayerNum].hand;
                 const handCard = hand.pop()!;
+                handCard.cpuPlaced = true;
                 allStacks[i].push(handCard);
 
                 if (hand.length === 0) {
@@ -238,11 +258,18 @@ function App() {
             }
         }
 
-        cpuPutCard(first.id);
+        const result = cpuPutCard(first.id);
+        if (result === null) return;
         setTimeout(() => {
             cpuPutCard(second.id);
         }, cpuSecondMoveTimeout * 1000);
     }
+
+    createEffect(() => {
+        if (gameState().wonBy !== null) {
+            clearInterval(cpuInterval());
+        }
+    });
 
     function randomizeArr<T>(arr: T[]): T[] {
         const temp = [...arr];
@@ -261,53 +288,73 @@ function App() {
         return temp;
     }
 
+    function resetCpuPutCards(gameState: GameState) {
+        const allCards = gameState.cardState
+            .flat()
+            .map((state) => state.side)
+            .flat();
+        for (let i = 0; i < allCards.length; i++) {
+            allCards[i][allCards[i].length - 1].cpuPlaced = false;
+        }
+    }
+
     function startCpuLoop() {
-        return setInterval(() => {
-            cpuMakeMove();
-        }, cpuTimeout * 1000);
+        return setInterval(
+            () => {
+                console.log("moving");
+                cpuMakeMove();
+            },
+            cpuTimeout * 1000 + cpuSecondMoveTimeout * 1000,
+        );
     }
 
     onMount(() => {
         const interval = startCpuLoop();
+        setCpuInterval(interval);
         onCleanup(() => {
             clearInterval(interval);
         });
     });
 
+    function restartGame() {
+        setGameState(generateInitial(numDecks));
+        startCpuLoop();
+    }
+
     return (
         <main class="flex justify-center items-center h-screen">
             {gameState().wonBy !== null ? (
-                <h1>won by {gameState().wonBy}</h1>
+                <div class="flex flex-col gap-4 items-center">
+                    {gameState().wonBy === currentPlayerNum ? (
+                        <h1>You Won!</h1>
+                    ) : (
+                        <h1>You Lost</h1>
+                    )}
+                    <button
+                        onClick={restartGame}
+                        class="bg-neutral-200 px-8 py-4 rounded-xl cursor-pointer border-2 border-neutral-400 text-neutral-500 duration-150 hover:text-neutral-600 hover:border-neutral-500"
+                    >
+                        Restart
+                    </button>
+                </div>
             ) : (
                 <>
                     <div class="flex flex-col gap-24">
                         <div class="flex gap-8">
                             {gameState().cardState[0].side.map((cards) => (
-                                <Card
-                                    num={cards[cards.length - 1].number}
-                                    suit={cards[cards.length - 1].suit}
-                                    width={120}
-                                    onClick={() =>
-                                        handleCardClick(
-                                            0,
-                                            cards[cards.length - 1].id,
-                                        )
-                                    }
+                                <CardPile
+                                    cards={cards}
+                                    width={cardWidth}
+                                    onClick={(id) => handleCardClick(0, id)}
                                 />
                             ))}
                         </div>
                         <div class="flex gap-8">
                             {gameState().cardState[1].side.map((cards) => (
-                                <Card
-                                    num={cards[cards.length - 1].number}
-                                    suit={cards[cards.length - 1].suit}
-                                    width={120}
-                                    onClick={() =>
-                                        handleCardClick(
-                                            1,
-                                            cards[cards.length - 1].id,
-                                        )
-                                    }
+                                <CardPile
+                                    cards={cards}
+                                    width={cardWidth}
+                                    onClick={(id) => handleCardClick(1, id)}
                                 />
                             ))}
                         </div>

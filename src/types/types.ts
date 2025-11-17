@@ -4,6 +4,7 @@ export type Card = {
     id: string;
     number: number;
     suit: Suit;
+    cpuPlaced: boolean;
 };
 
 export type MatchInfo = {

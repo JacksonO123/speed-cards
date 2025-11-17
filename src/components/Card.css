@@ -1,0 +1,17 @@
+:root {
+    --cpu-placed: red;
+}
+
+.cpu-placed {
+    background: white;
+    animation: 1s ease-out cpuPlacedAnimation;
+}
+
+@keyframes cpuPlacedAnimation {
+    from {
+        background: var(--cpu-placed);
+    }
+    to {
+        background: white;
+    }
+}
