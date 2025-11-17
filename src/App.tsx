@@ -176,7 +176,7 @@ function App() {
                             ))}
                         </div>
                     </div>
-                    <div class="absolute left-0 bottom-0 text-5xl">
+                    <div class="absolute left-4 bottom-4 text-5xl">
                         {gameState().cardState[currentPlayerNum].hand.length}
                     </div>
                 </>
