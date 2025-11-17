@@ -6,7 +6,7 @@ import {
     type Suit,
 } from "./types/types";
 import Card from "./components/Card";
-import { createSignal } from "solid-js";
+import { createSignal, onCleanup, onMount } from "solid-js";
 import Alerts from "./components/Alerts";
 import { useAlerts } from "./hooks/useAlerts";
 
@@ -19,6 +19,8 @@ function App() {
     const numDecks = 1;
     const currentPlayerNum = 1;
     const oppPlayerNum = 0;
+    const cpuTimeout = 4; // seconds
+    const cpuSecondMoveTimeout = 1; // seconds
 
     const [gameState, setGameState] = createSignal(generateInitial(numDecks));
     const [matches, setMatches] = createSignal(getMatches());
@@ -146,6 +148,8 @@ function App() {
             if (cardStack[cardStack.length - 1].id === id) {
                 const fromHand =
                     newGameState.cardState[currentPlayerNum].hand.pop()!;
+                newGameState.cardState[playerNum].side[i].push(fromHand);
+
                 if (
                     newGameState.cardState[currentPlayerNum].hand.length === 0
                 ) {
@@ -153,7 +157,6 @@ function App() {
                     setGameState({ ...newGameState });
                     return;
                 }
-                newGameState.cardState[playerNum].side[i].push(fromHand);
             }
         }
 
@@ -190,6 +193,84 @@ function App() {
 
         setGameState({ ...currentGameState });
     }
+
+    /// return null if game won, true if card placed, false if not placed
+    function cpuPutCard(cardId: string): boolean | null {
+        const newGameState = gameState();
+        const allStacks = newGameState.cardState
+            .map((state) => state.side)
+            .flat();
+        for (let i = 0; i < allStacks.length; i++) {
+            const topICard = allStacks[i][allStacks[i].length - 1];
+            if (topICard.id === cardId) {
+                const hand = newGameState.cardState[oppPlayerNum].hand;
+                const handCard = hand.pop()!;
+                allStacks[i].push(handCard);
+
+                if (hand.length === 0) {
+                    newGameState.wonBy = oppPlayerNum;
+                    setGameState({ ...newGameState });
+                    return null;
+                }
+
+                setGameState({ ...newGameState });
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    function cpuMakeMove() {
+        const currentMatches = randomizeArr(getMatches());
+        if (currentMatches.length === 0) return;
+
+        const first =
+            currentMatches[Math.floor(Math.random() * currentMatches.length)];
+        var second: MatchInfo;
+
+        for (let i = 0; i < currentMatches.length; i++) {
+            if (currentMatches[i].id === first.id) continue;
+            if (currentMatches[i].number === first.number) {
+                second = currentMatches[i];
+            }
+        }
+
+        cpuPutCard(first.id);
+        setTimeout(() => {
+            cpuPutCard(second.id);
+        }, cpuSecondMoveTimeout * 1000);
+    }
+
+    function randomizeArr<T>(arr: T[]): T[] {
+        const temp = [...arr];
+
+        for (let i = 0; i < temp.length; i++) {
+            let randIndex = i;
+            while (randIndex === i) {
+                randIndex = Math.floor(Math.random() * temp.length);
+            }
+
+            const val = temp[randIndex];
+            temp[randIndex] = temp[i];
+            temp[i] = val;
+        }
+
+        return temp;
+    }
+
+    function startCpuLoop() {
+        return setInterval(() => {
+            cpuMakeMove();
+        }, cpuTimeout * 1000);
+    }
+
+    onMount(() => {
+        const interval = startCpuLoop();
+        onCleanup(() => {
+            clearInterval(interval);
+        });
+    });
 
     return (
         <main class="flex justify-center items-center h-screen">
@@ -239,6 +320,9 @@ function App() {
                     </div>
                     <div class="absolute left-4 bottom-4 text-5xl">
                         {gameState().cardState[currentPlayerNum].hand.length}
+                    </div>
+                    <div class="absolute top-4 right-4 text-5xl">
+                        {gameState().cardState[oppPlayerNum].hand.length}
                     </div>
                     <Alerts alerts={alerts()} />
                 </>
