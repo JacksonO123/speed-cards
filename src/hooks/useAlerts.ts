@@ -27,7 +27,14 @@ export function useAlerts() {
 
         setTimeout(
             () => {
-                setAlerts((prev) => prev.filter((item) => item.id !== alertId));
+                setAlerts((prev) => {
+                    for (let i = 0; i < prev.length; i++) {
+                        if (prev[i].id === alertId) {
+                            prev.splice(i, 1);
+                        }
+                    }
+                    return prev;
+                });
             },
             alertDuration * 1000 + animationTime * 1000,
         );

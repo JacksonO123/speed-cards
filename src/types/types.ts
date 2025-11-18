@@ -29,3 +29,15 @@ export type AlertType = {
     msg: string;
     active: boolean;
 };
+
+export type Point = {
+    x: number;
+    y: number;
+};
+
+export type FloatInstr = {
+    id: string;
+    from: Point;
+    to: Point;
+    card: Card;
+};
