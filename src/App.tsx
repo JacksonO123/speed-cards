@@ -94,7 +94,7 @@ function App() {
             id: crypto.randomUUID(),
             number: +parts[1],
             suit: parts[0] as Suit,
-            cpuPlaced: false,
+            placedBy: "none",
         };
     }
 
@@ -161,7 +161,7 @@ function App() {
                 resetCpuPutCards(newGameState);
                 const fromHand =
                     newGameState.cardState[currentPlayerNum].hand.pop()!;
-                fromHand.cpuPlaced = false;
+                fromHand.placedBy = "player";
                 newGameState.cardState[playerNum].side[i].push(fromHand);
 
                 if (
@@ -193,7 +193,7 @@ function App() {
         const player1Top4 = player1Hand.splice(player1Hand.length - 4, 4);
         currentGameState.cardState[currentPlayerNum].side = player1Top4.map(
             (card) => {
-                card.cpuPlaced = false;
+                card.placedBy = "none";
                 return [card];
             },
         );
@@ -205,7 +205,7 @@ function App() {
         const player2Top4 = player2Hand.splice(player2Hand.length - 4, 4);
         currentGameState.cardState[oppPlayerNum].side = player2Top4.map(
             (card) => {
-                card.cpuPlaced = false;
+                card.placedBy = "none";
                 return [card];
             },
         );
@@ -225,7 +225,7 @@ function App() {
                 resetCpuPutCards(newGameState);
                 const hand = newGameState.cardState[oppPlayerNum].hand;
                 const handCard = hand.pop()!;
-                handCard.cpuPlaced = true;
+                handCard.placedBy = "cpu";
                 allStacks[i].push(handCard);
 
                 if (hand.length === 0) {
@@ -294,7 +294,7 @@ function App() {
             .map((state) => state.side)
             .flat();
         for (let i = 0; i < allCards.length; i++) {
-            allCards[i][allCards[i].length - 1].cpuPlaced = false;
+            allCards[i][allCards[i].length - 1].placedBy = "none";
         }
     }
 

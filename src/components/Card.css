@@ -1,5 +1,6 @@
 :root {
-    --cpu-placed: red;
+    --cpu-placed: oklch(63.7% 0.237 25.331);
+    --player-placed: oklch(62.7% 0.194 149.214);
 }
 
 .cpu-placed {
@@ -7,9 +8,23 @@
     animation: 1s ease-out cpuPlacedAnimation;
 }
 
+.player-placed {
+    background: white;
+    animation: 1s ease-out playerPlacedAnimation;
+}
+
 @keyframes cpuPlacedAnimation {
     from {
         background: var(--cpu-placed);
+    }
+    to {
+        background: white;
+    }
+}
+
+@keyframes playerPlacedAnimation {
+    from {
+        background: var(--player-placed);
     }
     to {
         background: white;

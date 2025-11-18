@@ -101,6 +101,7 @@ export default function Card(props: CardProps) {
     }) => (
         <img
             src={imgMap[props.suit] as string}
+            draggable={false}
             class={twMerge(className, "max-w-full")}
             style={{
                 ...(maxSize
@@ -129,6 +130,7 @@ export default function Card(props: CardProps) {
         >
             {props.number > 10 ? (
                 <img
+                    draggable={false}
                     src={
                         (imgMap[props.number as FaceNumbers] as SuitInfo)[
                             props.suit
@@ -180,7 +182,11 @@ export default function Card(props: CardProps) {
         <div
             class={twMerge(
                 "border-2 border-gray-300 w-[225px] h-[300px] rounded-lg flex justify-between px-[1.35em] gap-1 cursor-pointer select-none shadow-xs relative bg-white",
-                props.cpuPlaced && "cpu-placed",
+                props.placedBy === "cpu"
+                    ? "cpu-placed"
+                    : props.placedBy === "player"
+                      ? "player-placed"
+                      : null,
                 props.className,
             )}
             onClick={() => props.onClick?.()}

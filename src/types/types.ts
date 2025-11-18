@@ -1,10 +1,12 @@
 export type Suit = "clubs" | "hearts" | "diamonds" | "spades";
 
+export type PlacedSources = "player" | "cpu" | "none";
+
 export type Card = {
     id: string;
     number: number;
     suit: Suit;
-    cpuPlaced: boolean;
+    placedBy: PlacedSources;
 };
 
 export type MatchInfo = {
