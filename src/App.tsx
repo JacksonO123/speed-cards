@@ -21,7 +21,7 @@ const NOT_PLACING = 0;
 function App() {
     const cardWidth = 180;
     const numPlayerCards = 4;
-    const numDecks = 1;
+    const numDecks = 4;
     const currentPlayerNum = 1;
     const oppPlayerNum = 0;
     const cpuTimeout = 4; // seconds
@@ -37,7 +37,9 @@ function App() {
     const [alerts, addAlert] = useAlerts();
     const [cpuInterval, setCpuInterval] = createSignal(-1);
 
-    const [topDeckRef, setTopDeckRef] = createSignal<HTMLDivElement | undefined>(undefined);
+    const [topDeckRef, setTopDeckRef] = createSignal<
+        HTMLDivElement | undefined
+    >(undefined);
     const [floatInstructions, addFloatInstruction] = useFloatInstr();
 
     function generateInitial(numDecks: number): GameState {
@@ -56,8 +58,12 @@ function App() {
             player2.hand.push(card2);
         }
 
-        player1.side = player1.hand.splice(0, numPlayerCards).map((card) => [card]);
-        player2.side = player2.hand.splice(0, numPlayerCards).map((card) => [card]);
+        player1.side = player1.hand
+            .splice(0, numPlayerCards)
+            .map((card) => [card]);
+        player2.side = player2.hand
+            .splice(0, numPlayerCards)
+            .map((card) => [card]);
 
         res.cardState.push(player1, player2);
 
@@ -138,7 +144,10 @@ function App() {
         if (!cardStack) return;
         const card = cardStack[cardStack.length - 1];
 
-        if (currentPlacing().number === NOT_PLACING || currentPlacing().number !== card.number) {
+        if (
+            currentPlacing().number === NOT_PLACING ||
+            currentPlacing().number !== card.number
+        ) {
             const newMatches = getMatches();
             setPlayerMatches(newMatches);
             setCurrentPlacing((prev) => {
@@ -153,19 +162,31 @@ function App() {
         if (!includesCard) return;
 
         const newGameState = gameState();
-        for (let i = 0; i < newGameState.cardState[playerNum].side.length; i++) {
+        for (
+            let i = 0;
+            i < newGameState.cardState[playerNum].side.length;
+            i++
+        ) {
             const cardStack = newGameState.cardState[playerNum].side[i];
             if (cardStack[cardStack.length - 1].id === id) {
                 resetTaggedPlacedCards(newGameState);
-                const fromHand = newGameState.cardState[currentPlayerNum].hand.pop()!;
+                const fromHand =
+                    newGameState.cardState[currentPlayerNum].hand.pop()!;
                 fromHand.placedBy = "player";
                 newGameState.cardState[playerNum].side[i].push(fromHand);
 
                 const rect = deckRef.getBoundingClientRect();
                 const from: Point = { x: rect.x, y: rect.y };
-                addFloatInstruction({ id: crypto.randomUUID(), from, to: toPos, card: fromHand });
+                addFloatInstruction({
+                    id: crypto.randomUUID(),
+                    from,
+                    to: toPos,
+                    card: fromHand,
+                });
 
-                if (newGameState.cardState[currentPlayerNum].hand.length === 0) {
+                if (
+                    newGameState.cardState[currentPlayerNum].hand.length === 0
+                ) {
                     newGameState.wonBy = currentPlayerNum;
                     setGameState({ ...newGameState });
                     return;
@@ -201,20 +222,28 @@ function App() {
         const currentGameState = gameState();
 
         const player1Hand = currentGameState.cardState[currentPlayerNum].hand;
-        player1Hand.unshift(...currentGameState.cardState[currentPlayerNum].side.flat());
+        player1Hand.unshift(
+            ...currentGameState.cardState[currentPlayerNum].side.flat(),
+        );
         const player1Top4 = player1Hand.splice(player1Hand.length - 4, 4);
-        currentGameState.cardState[currentPlayerNum].side = player1Top4.map((card) => {
-            card.placedBy = "none";
-            return [card];
-        });
+        currentGameState.cardState[currentPlayerNum].side = player1Top4.map(
+            (card) => {
+                card.placedBy = "none";
+                return [card];
+            },
+        );
 
         const player2Hand = currentGameState.cardState[oppPlayerNum].hand;
-        player2Hand.unshift(...currentGameState.cardState[oppPlayerNum].side.flat());
+        player2Hand.unshift(
+            ...currentGameState.cardState[oppPlayerNum].side.flat(),
+        );
         const player2Top4 = player2Hand.splice(player2Hand.length - 4, 4);
-        currentGameState.cardState[oppPlayerNum].side = player2Top4.map((card) => {
-            card.placedBy = "none";
-            return [card];
-        });
+        currentGameState.cardState[oppPlayerNum].side = player2Top4.map(
+            (card) => {
+                card.placedBy = "none";
+                return [card];
+            },
+        );
 
         setGameState({ ...currentGameState });
     }
@@ -222,7 +251,9 @@ function App() {
     /// return null if game won, true if card placed, false if not placed
     function cpuPutCard(cardId: string): boolean | null {
         const newGameState = gameState();
-        const allStacks = newGameState.cardState.map((state) => state.side).flat();
+        const allStacks = newGameState.cardState
+            .map((state) => state.side)
+            .flat();
         for (let i = 0; i < allStacks.length; i++) {
             const topICard = allStacks[i][allStacks[i].length - 1];
             if (topICard.id === cardId) {
@@ -251,7 +282,8 @@ function App() {
         const currentMatches = randomizeArr(cpuMatches());
         if (currentMatches.length === 0) return;
 
-        const first = currentMatches[Math.floor(Math.random() * currentMatches.length)];
+        const first =
+            currentMatches[Math.floor(Math.random() * currentMatches.length)];
         var second: MatchInfo;
 
         for (let i = 0; i < currentMatches.length; i++) {
@@ -328,10 +360,14 @@ function App() {
     }
 
     return (
-        <main class="flex justify-center items-center h-screen">
-            {gameState().wonBy !== null ? (
-                <div class="flex flex-col gap-4 items-center">
-                    {gameState().wonBy === currentPlayerNum ? <h1>You Won!</h1> : <h1>You Lost</h1>}
+        <main class="flex justify-center items-center h-screen overflow-hidden">
+            {gameState().wonBy !== null && (
+                <div class="flex flex-col gap-4 items-center absolute top-0 left-0 bottom-0 right-0 bg-transparent backdrop-blur-lg z-2000 justify-center">
+                    {gameState().wonBy === currentPlayerNum ? (
+                        <h1>You Won!</h1>
+                    ) : (
+                        <h1>You Lost</h1>
+                    )}
                     <button
                         onClick={restartGame}
                         class="bg-neutral-200 px-8 py-4 rounded-xl cursor-pointer border-2 border-neutral-400 text-neutral-500 duration-150 hover:text-neutral-600 hover:border-neutral-500"
@@ -339,7 +375,8 @@ function App() {
                         Restart
                     </button>
                 </div>
-            ) : (
+            )}
+            {
                 <>
                     <div class="flex flex-col gap-24">
                         <div class="flex gap-8">
@@ -347,7 +384,9 @@ function App() {
                                 <CardPile
                                     cards={cards}
                                     width={cardWidth}
-                                    onClick={(pos, id) => handleCardClick(0, id, pos)}
+                                    onClick={(pos, id) =>
+                                        handleCardClick(0, id, pos)
+                                    }
                                 />
                             ))}
                         </div>
@@ -356,25 +395,30 @@ function App() {
                                 <CardPile
                                     cards={cards}
                                     width={cardWidth}
-                                    onClick={(pos, id) => handleCardClick(1, id, pos)}
+                                    onClick={(pos, id) =>
+                                        handleCardClick(1, id, pos)
+                                    }
                                 />
                             ))}
                         </div>
-                        <div class="w-full px-24">
+                    </div>
+                    <div class="absolute left-[50%] bottom-0 translate-x-[-50%] translate-y-[50%]">
+                        <div class="relative">
+                            <DeckGraphic
+                                numCards={
+                                    gameState().cardState[currentPlayerNum].hand
+                                        .length
+                                }
+                                width={cardWidth}
+                                setDeckRef={handleSetDeckRef}
+                            />
                             <button
                                 onClick={tryNewCards}
-                                class="bg-neutral-200 px-8 py-4 rounded-xl cursor-pointer border-2 border-neutral-400 text-neutral-500 duration-150 hover:text-neutral-600 hover:border-neutral-500"
+                                class="bg-neutral-200 px-8 py-4 rounded-xl cursor-pointer border-2 border-neutral-400 text-neutral-500 duration-150 hover:text-neutral-600 hover:border-neutral-500 absolute top-0 right-0 translate-x-[calc(100%+--spacing(4))]"
                             >
                                 No Matches
                             </button>
                         </div>
-                    </div>
-                    <div class="absolute left-[50%] bottom-0 translate-x-[-50%] translate-y-[50%]">
-                        <DeckGraphic
-                            numCards={gameState().cardState[currentPlayerNum].hand.length}
-                            width={cardWidth}
-                            setDeckRef={handleSetDeckRef}
-                        />
                     </div>
                     <div class="absolute left-4 bottom-4 text-5xl">
                         {gameState().cardState[currentPlayerNum].hand.length}
@@ -383,9 +427,12 @@ function App() {
                         {gameState().cardState[oppPlayerNum].hand.length}
                     </div>
                     <Alerts alerts={alerts()} />
-                    <FloatingCards instructions={floatInstructions()} cardWidth={cardWidth} />
+                    <FloatingCards
+                        instructions={floatInstructions()}
+                        cardWidth={cardWidth}
+                    />
                 </>
-            )}
+            }
         </main>
     );
 }

@@ -48,7 +48,10 @@ export default function Card(props: CardProps) {
 
     var cardRef: HTMLDivElement;
 
-    const imgMap: Record<Suit | FaceNumbers, CardSrcData<Suit | FaceNumbers>> = {
+    const imgMap: Record<
+        Suit | FaceNumbers,
+        CardSrcData<Suit | FaceNumbers>
+    > = {
         clubs: clubsSrc,
         hearts: heartsSrc,
         diamonds: diamondsSrc,
@@ -91,7 +94,9 @@ export default function Card(props: CardProps) {
         }
     };
 
-    const NumComp = () => <span class="w-fit">{formatNum(props.card.number)}</span>;
+    const NumComp = () => (
+        <span class="w-fit">{formatNum(props.card.number)}</span>
+    );
 
     const SuitComp = (suitCompProps: { maxSize?: number; class?: string }) => (
         <img
@@ -126,7 +131,11 @@ export default function Card(props: CardProps) {
             {props.card.number > 10 ? (
                 <img
                     draggable={false}
-                    src={(imgMap[props.card.number as FaceNumbers] as SuitInfo)[props.card.suit]}
+                    src={
+                        (imgMap[props.card.number as FaceNumbers] as SuitInfo)[
+                            props.card.suit
+                        ]
+                    }
                     class="border-2 border-sky-700"
                 />
             ) : props.card.number <= 3 ? (
@@ -146,7 +155,10 @@ export default function Card(props: CardProps) {
     );
 
     const SideCol = () => {
-        const length = props.card.number > 3 ? Math.min(Math.floor(props.card.number / 2), 4) : 0;
+        const length =
+            props.card.number > 3
+                ? Math.min(Math.floor(props.card.number / 2), 4)
+                : 0;
 
         return props.card.number <= 10 ? (
             <div
@@ -158,7 +170,11 @@ export default function Card(props: CardProps) {
                 {Array(length)
                     .fill(null)
                     .map((_, index) => (
-                        <SuitComp class={index >= length / 2 ? "rotate-180" : undefined} />
+                        <SuitComp
+                            class={
+                                index >= length / 2 ? "rotate-180" : undefined
+                            }
+                        />
                     ))}
             </div>
         ) : null;
@@ -183,7 +199,8 @@ export default function Card(props: CardProps) {
                       : null,
                 props.class,
             )}
-            onClick={() => props.onClick?.(getPos())}
+            onMouseDown={() => props.onClick?.(getPos())}
+            // onClick={}
             style={{
                 width: `${width}px`,
                 "min-width": `${width}px`,
