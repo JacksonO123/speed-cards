@@ -11,7 +11,8 @@ export default function DeckGraphic(props: DeckGraphicProps) {
     const Img = (imgProps: { index: number; abs?: boolean }) => (
         <img
             src={backFace}
-            class={twMerge(imgProps.abs ? "absolute top-0 left-0" : "relative")}
+            draggable={false}
+            class={twMerge("select-none", imgProps.abs ? "absolute top-0 left-0" : "relative")}
             style={{
                 width: `${props.width}px`,
                 "z-index": 3 - imgProps.index,
