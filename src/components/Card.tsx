@@ -7,21 +7,6 @@ import heartsSrc from "../assets/heart.png";
 import diamondsSrc from "../assets/diamonds.png";
 import spadesSrc from "../assets/spades.svg";
 
-import jackClubsSrc from "../assets/jack-faces/jack-clubs.jpg";
-import jackHeartsSrc from "../assets/jack-faces/jack-hearts.jpg";
-import jackDiamondsSrc from "../assets/jack-faces/jack-diamonds.jpg";
-import jackSpadesSrc from "../assets/jack-faces/jack-spades.jpg";
-
-import queenClubsSrc from "../assets/queen-faces/queen-clubs.jpg";
-import queenHeartsSrc from "../assets/queen-faces/queen-hearts.jpg";
-import queenDiamondsSrc from "../assets/queen-faces/queen-diamonds.jpg";
-import queenSpadesSrc from "../assets/queen-faces/queen-spades.jpg";
-
-import kingClubsSrc from "../assets/king-faces/king-clubs.jpg";
-import kingHeartsSrc from "../assets/king-faces/king-hearts.jpg";
-import kingDiamondsSrc from "../assets/king-faces/king-diamonds.jpg";
-import kingSpadesSrc from "../assets/king-faces/king-spades.jpg";
-
 type CardProps = {
     width?: number;
     class?: string;
@@ -48,31 +33,28 @@ export default function Card(props: CardProps) {
 
     var cardRef: HTMLDivElement;
 
-    const imgMap: Record<
-        Suit | FaceNumbers,
-        CardSrcData<Suit | FaceNumbers>
-    > = {
+    const imgMap: Record<Suit | FaceNumbers, CardSrcData<Suit | FaceNumbers>> = {
         clubs: clubsSrc,
         hearts: heartsSrc,
         diamonds: diamondsSrc,
         spades: spadesSrc,
         11: {
-            clubs: jackClubsSrc,
-            hearts: jackHeartsSrc,
-            diamonds: jackDiamondsSrc,
-            spades: jackSpadesSrc,
+            clubs: "/jack-faces/jack-clubs.jpg",
+            hearts: "/jack-faces/jack-hearts.jpg",
+            diamonds: "/jack-faces/jack-diamonds.jpg",
+            spades: "/jack-faces/jack-spades.jpg",
         },
         12: {
-            clubs: queenClubsSrc,
-            hearts: queenHeartsSrc,
-            diamonds: queenDiamondsSrc,
-            spades: queenSpadesSrc,
+            clubs: "/queen-faces/queen-clubs.jpg",
+            hearts: "/queen-faces/queen-hearts.jpg",
+            diamonds: "/queen-faces/queen-diamonds.jpg",
+            spades: "/queen-faces/queen-spades.jpg",
         },
         13: {
-            clubs: kingClubsSrc,
-            hearts: kingHeartsSrc,
-            diamonds: kingDiamondsSrc,
-            spades: kingSpadesSrc,
+            clubs: "/king-faces/king-clubs.jpg",
+            hearts: "/king-faces/king-hearts.jpg",
+            diamonds: "/king-faces/king-diamonds.jpg",
+            spades: "/king-faces/king-spades.jpg",
         },
     };
 
@@ -94,9 +76,7 @@ export default function Card(props: CardProps) {
         }
     };
 
-    const NumComp = () => (
-        <span class="w-fit">{formatNum(props.card.number)}</span>
-    );
+    const NumComp = () => <span class="w-fit">{formatNum(props.card.number)}</span>;
 
     const SuitComp = (suitCompProps: { maxSize?: number; class?: string }) => (
         <img
@@ -131,11 +111,7 @@ export default function Card(props: CardProps) {
             {props.card.number > 10 ? (
                 <img
                     draggable={false}
-                    src={
-                        (imgMap[props.card.number as FaceNumbers] as SuitInfo)[
-                            props.card.suit
-                        ]
-                    }
+                    src={(imgMap[props.card.number as FaceNumbers] as SuitInfo)[props.card.suit]}
                     class="border-2 border-sky-700"
                 />
             ) : props.card.number <= 3 ? (
@@ -155,10 +131,7 @@ export default function Card(props: CardProps) {
     );
 
     const SideCol = () => {
-        const length =
-            props.card.number > 3
-                ? Math.min(Math.floor(props.card.number / 2), 4)
-                : 0;
+        const length = props.card.number > 3 ? Math.min(Math.floor(props.card.number / 2), 4) : 0;
 
         return props.card.number <= 10 ? (
             <div
@@ -170,11 +143,7 @@ export default function Card(props: CardProps) {
                 {Array(length)
                     .fill(null)
                     .map((_, index) => (
-                        <SuitComp
-                            class={
-                                index >= length / 2 ? "rotate-180" : undefined
-                            }
-                        />
+                        <SuitComp class={index >= length / 2 ? "rotate-180" : undefined} />
                     ))}
             </div>
         ) : null;
