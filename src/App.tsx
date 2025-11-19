@@ -462,6 +462,7 @@ function App() {
                     <div class="absolute top-4 right-4 text-5xl">
                         {gameState().cardState.cpu.hand.length}
                     </div>
+                    <div class="absolute right-3 bottom-2">By Jackson Otto</div>
                     <Alerts alerts={alerts()} />
                     <FloatingCards instructions={floatInstructions()} cardWidth={cardWidth} />
                 </div>
