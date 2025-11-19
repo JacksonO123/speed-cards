@@ -1,4 +1,4 @@
-import { createEffect, For } from "solid-js";
+import { For } from "solid-js";
 import type { Card as CardType, Point } from "../types/types";
 import Card from "./Card";
 import { floatDuration } from "../hooks/useFloatInstr";
