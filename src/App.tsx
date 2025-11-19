@@ -15,6 +15,7 @@ import DeckGraphic from "./components/DeckGraphic";
 import { floatDuration, useFloatInstr } from "./hooks/useFloatInstr";
 import FloatingCards from "./components/FloatingCards";
 import "./App.css";
+import Card from "./components/Card";
 
 type DeckMap = Map<string, number>;
 
@@ -429,8 +430,30 @@ function App() {
         }
     });
 
+    const preloadCards: CardType[] = [
+        { id: "", number: 11, suit: "clubs", placedBy: "none" },
+        { id: "", number: 11, suit: "hearts", placedBy: "none" },
+        { id: "", number: 11, suit: "diamonds", placedBy: "none" },
+        { id: "", number: 11, suit: "spades", placedBy: "none" },
+
+        { id: "", number: 12, suit: "clubs", placedBy: "none" },
+        { id: "", number: 12, suit: "hearts", placedBy: "none" },
+        { id: "", number: 12, suit: "diamonds", placedBy: "none" },
+        { id: "", number: 12, suit: "spades", placedBy: "none" },
+
+        { id: "", number: 13, suit: "clubs", placedBy: "none" },
+        { id: "", number: 13, suit: "hearts", placedBy: "none" },
+        { id: "", number: 13, suit: "diamonds", placedBy: "none" },
+        { id: "", number: 13, suit: "spades", placedBy: "none" },
+    ];
+
     return (
         <main class="flex justify-center items-center h-screen overflow-hidden">
+            <div class="hidden" hidden>
+                {preloadCards.map((card) => (
+                    <Card card={card} width={cardWidth} />
+                ))}
+            </div>
             {gameState().wonBy !== null && (
                 <div class="flex flex-col gap-4 items-center absolute top-0 left-0 bottom-0 right-0 bg-transparent animate-backdrop z-3000 justify-center">
                     {gameState().wonBy === "player" ? <h1>You Won!</h1> : <h1>You Lost</h1>}
