@@ -138,6 +138,7 @@ function App() {
     }
 
     function handleCardClick(pileClickLocation: PileClickLocation, id: string, toPos: Point) {
+        console.log("clicking");
         const deckRef = topDeckRef();
         if (!deckRef || currentPlacing().id === id) return;
 
@@ -145,17 +146,20 @@ function App() {
         const cardStack = allPiles.find((item) => item[item.length - 1].id === id);
         if (!cardStack) return;
         const card = cardStack[cardStack.length - 1];
+        console.log({ suit: card.suit, number: card.number });
 
-        if (currentPlacing().number === NOT_PLACING || currentPlacing().number !== card.number) {
+        let allMatches = [...playerMatches(), ...cpuMatches()];
+
+        if (currentPlacing().number === NOT_PLACING || !allMatches.find((item) => item.id === id)) {
             const newMatches = getMatches();
             setPlayerMatches(newMatches);
             setCurrentPlacing((prev) => {
                 prev.number = card.number;
                 return { ...prev };
             });
+            allMatches = [...playerMatches(), ...cpuMatches()];
         }
 
-        const allMatches = [...playerMatches(), ...cpuMatches()];
         const includesCard = allMatches.find(
             (item) => item.number === card.number && item.id === card.id,
         );
@@ -335,8 +339,9 @@ function App() {
     }
 
     createEffect(() => {
+        const interval = cpuInterval();
         if (gameState().wonBy !== null) {
-            clearInterval(cpuInterval());
+            clearInterval(interval);
         }
     });
 
