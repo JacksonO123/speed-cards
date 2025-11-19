@@ -19,9 +19,14 @@ export type PlayerState = {
     side: Card[][];
 };
 
+export type CardState = {
+    player: PlayerState;
+    cpu: PlayerState;
+};
+
 export type GameState = {
-    wonBy: number | null;
-    cardState: PlayerState[];
+    wonBy: "player" | "cpu" | null;
+    cardState: CardState;
 };
 
 export type AlertType = {
@@ -40,4 +45,14 @@ export type FloatInstr = {
     from: Point;
     to: Point;
     card: Card;
+};
+
+export type MatchLocationInfo = {
+    match: MatchInfo;
+    index: number;
+};
+
+export type PileClickLocation = {
+    side: keyof CardState;
+    index: number;
 };

@@ -5,12 +5,12 @@
 
 .cpu-placed {
     background: white;
-    animation: 1s ease-out cpuPlacedAnimation;
+    animation: 0.5s ease-out cpuPlacedAnimation;
 }
 
 .player-placed {
     background: white;
-    animation: 1s ease-out playerPlacedAnimation;
+    animation: 0.5s ease-out playerPlacedAnimation;
 }
 
 @keyframes cpuPlacedAnimation {

@@ -1,18 +1,20 @@
-import {
-    type Card as CardType,
-    type GameState,
-    type MatchInfo,
-    type PlayerState,
-    type Point,
-    type Suit,
+import type {
+    Card as CardType,
+    GameState,
+    MatchInfo,
+    MatchLocationInfo,
+    PileClickLocation,
+    Point,
+    Suit,
 } from "./types/types";
-import { createEffect, createSignal, onCleanup, onMount } from "solid-js";
+import { createEffect, createSignal, onCleanup, onMount, type JSXElement } from "solid-js";
 import Alerts from "./components/Alerts";
 import { useAlerts } from "./hooks/useAlerts";
 import CardPile from "./components/CardPile";
 import DeckGraphic from "./components/DeckGraphic";
-import { useFloatInstr } from "./hooks/useFloatInstr";
+import { floatDuration, useFloatInstr } from "./hooks/useFloatInstr";
 import FloatingCards from "./components/FloatingCards";
+import "./App.css";
 
 type DeckMap = Map<string, number>;
 
@@ -21,11 +23,9 @@ const NOT_PLACING = 0;
 function App() {
     const cardWidth = 180;
     const numPlayerCards = 4;
-    const numDecks = 4;
-    const currentPlayerNum = 1;
-    const oppPlayerNum = 0;
+    const numDecks = 1;
     const cpuTimeout = 4; // seconds
-    const cpuSecondMoveTimeout = 1; // seconds
+    const cpuSecondMoveTimeout = 0.5; // seconds
 
     const [gameState, setGameState] = createSignal(generateInitial(numDecks));
     const [cpuMatches, setCpuMatches] = createSignal(getMatches());
@@ -37,35 +37,40 @@ function App() {
     const [alerts, addAlert] = useAlerts();
     const [cpuInterval, setCpuInterval] = createSignal(-1);
 
-    const [topDeckRef, setTopDeckRef] = createSignal<
-        HTMLDivElement | undefined
-    >(undefined);
+    const [topDeckRef, setTopDeckRef] = createSignal<HTMLDivElement | undefined>(undefined);
     const [floatInstructions, addFloatInstruction] = useFloatInstr();
 
     function generateInitial(numDecks: number): GameState {
-        const res: GameState = { wonBy: null, cardState: [] };
-
-        const player1: PlayerState = { hand: [], side: [] };
-        const player2: PlayerState = { hand: [], side: [] };
+        const res: GameState = {
+            wonBy: null,
+            cardState: {
+                player: {
+                    side: [],
+                    hand: [],
+                },
+                cpu: {
+                    side: [],
+                    hand: [],
+                },
+            },
+        };
 
         const deckMap: DeckMap = newDeckMap(numDecks);
 
         for (let i = 0; i < (52 * numDecks) / 2; i++) {
-            const card1 = randomCard(deckMap);
-            player1.hand.push(card1);
+            const playerCard = randomCard(deckMap);
+            res.cardState.player.hand.push(playerCard);
 
-            const card2 = randomCard(deckMap);
-            player2.hand.push(card2);
+            const cpuCard = randomCard(deckMap);
+            res.cardState.cpu.hand.push(cpuCard);
         }
 
-        player1.side = player1.hand
+        res.cardState.player.side = res.cardState.player.hand
             .splice(0, numPlayerCards)
             .map((card) => [card]);
-        player2.side = player2.hand
+        res.cardState.cpu.side = res.cardState.cpu.hand
             .splice(0, numPlayerCards)
             .map((card) => [card]);
-
-        res.cardState.push(player1, player2);
 
         return res;
     }
@@ -110,9 +115,7 @@ function App() {
     function getMatches(): MatchInfo[] {
         const idSet = new Set<string>();
         const matches: MatchInfo[] = [];
-        const allCards = gameState()
-            .cardState.map((player) => player.side)
-            .flat();
+        const allCards = [...gameState().cardState.player.side, ...gameState().cardState.cpu.side];
 
         for (let i = 0; i < allCards.length; i++) {
             for (let j = 0; j < allCards.length; j++) {
@@ -134,20 +137,16 @@ function App() {
         return [...matches];
     }
 
-    function handleCardClick(playerNum: number, id: string, toPos: Point) {
+    function handleCardClick(pileClickLocation: PileClickLocation, id: string, toPos: Point) {
         const deckRef = topDeckRef();
         if (!deckRef || currentPlacing().id === id) return;
 
-        const cardStack = gameState().cardState[playerNum].side.find(
-            (item) => item[item.length - 1].id === id,
-        );
+        const allPiles = [...gameState().cardState.player.side, ...gameState().cardState.cpu.side];
+        const cardStack = allPiles.find((item) => item[item.length - 1].id === id);
         if (!cardStack) return;
         const card = cardStack[cardStack.length - 1];
 
-        if (
-            currentPlacing().number === NOT_PLACING ||
-            currentPlacing().number !== card.number
-        ) {
+        if (currentPlacing().number === NOT_PLACING || currentPlacing().number !== card.number) {
             const newMatches = getMatches();
             setPlayerMatches(newMatches);
             setCurrentPlacing((prev) => {
@@ -156,24 +155,30 @@ function App() {
             });
         }
 
-        const includesCard = [...playerMatches(), ...cpuMatches()].find(
+        const allMatches = [...playerMatches(), ...cpuMatches()];
+        const includesCard = allMatches.find(
             (item) => item.number === card.number && item.id === card.id,
         );
-        if (!includesCard) return;
+        if (!includesCard) {
+            const newMatches = getMatches();
+            setPlayerMatches(newMatches);
+            setCurrentPlacing((prev) => {
+                prev.number = card.number;
+                return { ...prev };
+            });
+            return;
+        }
 
+        const topCards = allPiles.map((pile) => pile[pile.length - 1]);
         const newGameState = gameState();
-        for (
-            let i = 0;
-            i < newGameState.cardState[playerNum].side.length;
-            i++
-        ) {
-            const cardStack = newGameState.cardState[playerNum].side[i];
-            if (cardStack[cardStack.length - 1].id === id) {
-                resetTaggedPlacedCards(newGameState);
-                const fromHand =
-                    newGameState.cardState[currentPlayerNum].hand.pop()!;
+        for (let i = 0; i < topCards.length; i++) {
+            if (topCards[i].id === id) {
+                const fromHand = newGameState.cardState.player.hand.pop()!;
                 fromHand.placedBy = "player";
-                newGameState.cardState[playerNum].side[i].push(fromHand);
+                deferResetPlacedBy(fromHand);
+                newGameState.cardState[pileClickLocation.side].side[pileClickLocation.index].push(
+                    fromHand,
+                );
 
                 const rect = deckRef.getBoundingClientRect();
                 const from: Point = { x: rect.x, y: rect.y };
@@ -184,10 +189,8 @@ function App() {
                     card: fromHand,
                 });
 
-                if (
-                    newGameState.cardState[currentPlayerNum].hand.length === 0
-                ) {
-                    newGameState.wonBy = currentPlayerNum;
+                if (newGameState.cardState.player.hand.length === 0) {
+                    newGameState.wonBy = "player";
                     setGameState({ ...newGameState });
                     return;
                 }
@@ -203,10 +206,10 @@ function App() {
         let hasMatches = getMatches().length > 0;
 
         const currentCpuMatches = cpuMatches();
-        const allCards = gameState()
-            .cardState.map((state) => state.side)
-            .flat()
-            .map((pile) => pile[pile.length - 1]);
+        const allCards = [
+            ...gameState().cardState.player.side,
+            ...gameState().cardState.cpu.side,
+        ].map((pile) => pile[pile.length - 1]);
         for (const match of currentCpuMatches) {
             if (allCards.find((item) => item.id === match.id)) {
                 hasMatches = true;
@@ -221,50 +224,42 @@ function App() {
 
         const currentGameState = gameState();
 
-        const player1Hand = currentGameState.cardState[currentPlayerNum].hand;
-        player1Hand.unshift(
-            ...currentGameState.cardState[currentPlayerNum].side.flat(),
-        );
+        const player1Hand = currentGameState.cardState.player.hand;
+        player1Hand.unshift(...currentGameState.cardState.player.side.flat());
         const player1Top4 = player1Hand.splice(player1Hand.length - 4, 4);
-        currentGameState.cardState[currentPlayerNum].side = player1Top4.map(
-            (card) => {
-                card.placedBy = "none";
-                return [card];
-            },
-        );
+        currentGameState.cardState.player.side = player1Top4.map((card) => {
+            card.placedBy = "none";
+            return [card];
+        });
 
-        const player2Hand = currentGameState.cardState[oppPlayerNum].hand;
-        player2Hand.unshift(
-            ...currentGameState.cardState[oppPlayerNum].side.flat(),
-        );
+        const player2Hand = currentGameState.cardState.cpu.hand;
+        player2Hand.unshift(...currentGameState.cardState.cpu.side.flat());
         const player2Top4 = player2Hand.splice(player2Hand.length - 4, 4);
-        currentGameState.cardState[oppPlayerNum].side = player2Top4.map(
-            (card) => {
-                card.placedBy = "none";
-                return [card];
-            },
-        );
+        currentGameState.cardState.cpu.side = player2Top4.map((card) => {
+            card.placedBy = "none";
+            return [card];
+        });
 
         setGameState({ ...currentGameState });
     }
 
     /// return null if game won, true if card placed, false if not placed
-    function cpuPutCard(cardId: string): boolean | null {
+    function cpuPutCard(pileLocation: PileClickLocation, cardId: string): boolean | null {
         const newGameState = gameState();
-        const allStacks = newGameState.cardState
-            .map((state) => state.side)
-            .flat();
-        for (let i = 0; i < allStacks.length; i++) {
-            const topICard = allStacks[i][allStacks[i].length - 1];
-            if (topICard.id === cardId) {
-                resetTaggedPlacedCards(newGameState);
-                const hand = newGameState.cardState[oppPlayerNum].hand;
+        const topCards = [
+            ...newGameState.cardState.player.side,
+            ...newGameState.cardState.cpu.side,
+        ].map((pile) => pile[pile.length - 1]);
+        for (let i = 0; i < topCards.length; i++) {
+            if (topCards[i].id === cardId) {
+                const hand = newGameState.cardState.cpu.hand;
                 const handCard = hand.pop()!;
                 handCard.placedBy = "cpu";
-                allStacks[i].push(handCard);
+                deferResetPlacedBy(handCard);
+                newGameState.cardState[pileLocation.side].side[pileLocation.index].push(handCard);
 
                 if (hand.length === 0) {
-                    newGameState.wonBy = oppPlayerNum;
+                    newGameState.wonBy = "cpu";
                     setGameState({ ...newGameState });
                     return null;
                 }
@@ -277,26 +272,65 @@ function App() {
         return false;
     }
 
+    function getMatchTo(info: MatchInfo, matches: MatchInfo[]): MatchLocationInfo | null {
+        for (let i = 0; i < matches.length; i++) {
+            if (matches[i].id === info.id) continue;
+            if (matches[i].number === info.number) return { match: matches[i], index: i };
+        }
+
+        return null;
+    }
+
+    function getPileLocation(cardId: string): PileClickLocation | null {
+        const topCards = [
+            ...gameState().cardState.cpu.side,
+            ...gameState().cardState.player.side,
+        ].map((pile) => pile[pile.length - 1]);
+        for (let i = 0; i < topCards.length; i++) {
+            if (topCards[i].id === cardId) {
+                return {
+                    side: i > 3 ? "player" : "cpu",
+                    index: i % 4,
+                };
+            }
+        }
+
+        return null;
+    }
+
     function cpuMakeMove() {
-        setCpuMatches(getMatches());
+        console.log("making move");
+
+        setCpuMatches([...getMatches(), ...playerMatches()]);
         const currentMatches = randomizeArr(cpuMatches());
         if (currentMatches.length === 0) return;
 
-        const first =
-            currentMatches[Math.floor(Math.random() * currentMatches.length)];
-        var second: MatchInfo;
+        const first = currentMatches[Math.floor(Math.random() * currentMatches.length)];
+        let pileLocation = getPileLocation(first.id)!;
+        var second: MatchLocationInfo;
 
         for (let i = 0; i < currentMatches.length; i++) {
             if (currentMatches[i].id === first.id) continue;
             if (currentMatches[i].number === first.number) {
-                second = currentMatches[i];
+                second = { match: currentMatches[i], index: i };
             }
         }
 
-        const result = cpuPutCard(first.id);
+        // @ts-ignore
+        const result = cpuPutCard(pileLocation, first.id);
         if (result === null) return;
         setTimeout(() => {
-            cpuPutCard(second.id);
+            let matchIndex = second.index;
+            pileLocation = getPileLocation(second.match.id)!;
+            let placed = cpuPutCard(pileLocation, second.match.id);
+            while (!placed) {
+                currentMatches.splice(matchIndex, 1);
+                const newMatch = getMatchTo(first, currentMatches);
+                if (!newMatch) break;
+                matchIndex = newMatch.index;
+                const tempPileLocation = getPileLocation(newMatch.match.id)!;
+                placed = cpuPutCard(tempPileLocation, newMatch.match.id);
+            }
         }, cpuSecondMoveTimeout * 1000);
     }
 
@@ -323,14 +357,11 @@ function App() {
         return temp;
     }
 
-    function resetTaggedPlacedCards(gameState: GameState) {
-        const allCards = gameState.cardState
-            .flat()
-            .map((state) => state.side)
-            .flat();
-        for (let i = 0; i < allCards.length; i++) {
-            allCards[i][allCards[i].length - 1].placedBy = "none";
-        }
+    function deferResetPlacedBy(card: CardType) {
+        setTimeout(() => {
+            card.placedBy = "none";
+            setGameState({ ...gameState() });
+        }, floatDuration * 1000);
     }
 
     function startCpuLoop() {
@@ -359,15 +390,45 @@ function App() {
         setTopDeckRef(ref);
     }
 
+    const [cpuCardEls, setCpuCardEls] = createSignal<JSXElement[]>([]);
+    const [playerCardEls, setPlayerCardEls] = createSignal<JSXElement[]>([]);
+
+    onMount(() => {
+        {
+            const res: JSXElement[] = [];
+            for (let i = 0; i < gameState().cardState.cpu.side.length; i++) {
+                res.push(
+                    <CardPile
+                        cards={gameState().cardState.cpu.side[i]}
+                        width={cardWidth}
+                        onClick={(pos, id) => handleCardClick({ side: "cpu", index: i }, id, pos)}
+                    />,
+                );
+            }
+            setCpuCardEls(res);
+        }
+        {
+            const res: JSXElement[] = [];
+            for (let i = 0; i < gameState().cardState.player.side.length; i++) {
+                res.push(
+                    <CardPile
+                        cards={gameState().cardState.player.side[i]}
+                        width={cardWidth}
+                        onClick={(pos, id) =>
+                            handleCardClick({ side: "player", index: i }, id, pos)
+                        }
+                    />,
+                );
+            }
+            setPlayerCardEls(res);
+        }
+    });
+
     return (
         <main class="flex justify-center items-center h-screen overflow-hidden">
             {gameState().wonBy !== null && (
-                <div class="flex flex-col gap-4 items-center absolute top-0 left-0 bottom-0 right-0 bg-transparent backdrop-blur-lg z-2000 justify-center">
-                    {gameState().wonBy === currentPlayerNum ? (
-                        <h1>You Won!</h1>
-                    ) : (
-                        <h1>You Lost</h1>
-                    )}
+                <div class="flex flex-col gap-4 items-center absolute top-0 left-0 bottom-0 right-0 bg-transparent animate-backdrop z-3000 justify-center">
+                    {gameState().wonBy === "player" ? <h1>You Won!</h1> : <h1>You Lost</h1>}
                     <button
                         onClick={restartGame}
                         class="bg-neutral-200 px-8 py-4 rounded-xl cursor-pointer border-2 border-neutral-400 text-neutral-500 duration-150 hover:text-neutral-600 hover:border-neutral-500"
@@ -377,61 +438,33 @@ function App() {
                 </div>
             )}
             {
-                <>
-                    <div class="flex flex-col gap-24">
-                        <div class="flex gap-8">
-                            {gameState().cardState[0].side.map((cards) => (
-                                <CardPile
-                                    cards={cards}
-                                    width={cardWidth}
-                                    onClick={(pos, id) =>
-                                        handleCardClick(0, id, pos)
-                                    }
-                                />
-                            ))}
-                        </div>
-                        <div class="flex gap-8">
-                            {gameState().cardState[1].side.map((cards) => (
-                                <CardPile
-                                    cards={cards}
-                                    width={cardWidth}
-                                    onClick={(pos, id) =>
-                                        handleCardClick(1, id, pos)
-                                    }
-                                />
-                            ))}
-                        </div>
+                <div class="flex flex-col gap-12">
+                    <div class="flex flex-col gap-24 h-full justify-center items-center">
+                        <div class="flex gap-8">{cpuCardEls()}</div>
+                        <div class="flex gap-8">{playerCardEls()}</div>
                     </div>
-                    <div class="absolute left-[50%] bottom-0 translate-x-[-50%] translate-y-[50%]">
-                        <div class="relative">
-                            <DeckGraphic
-                                numCards={
-                                    gameState().cardState[currentPlayerNum].hand
-                                        .length
-                                }
-                                width={cardWidth}
-                                setDeckRef={handleSetDeckRef}
-                            />
-                            <button
-                                onClick={tryNewCards}
-                                class="bg-neutral-200 px-8 py-4 rounded-xl cursor-pointer border-2 border-neutral-400 text-neutral-500 duration-150 hover:text-neutral-600 hover:border-neutral-500 absolute top-0 right-0 translate-x-[calc(100%+--spacing(4))]"
-                            >
-                                No Matches
-                            </button>
-                        </div>
+                    <div class="h-20 flex justify-center gap-6 z-1000">
+                        <DeckGraphic
+                            numCards={gameState().cardState.player.hand.length}
+                            width={cardWidth}
+                            setDeckRef={handleSetDeckRef}
+                        />
+                        <button
+                            onClick={tryNewCards}
+                            class="bg-neutral-200 px-8 py-4 rounded-xl cursor-pointer border-2 border-neutral-400 text-neutral-500 duration-150 hover:text-neutral-600 hover:border-neutral-500"
+                        >
+                            No Matches
+                        </button>
                     </div>
                     <div class="absolute left-4 bottom-4 text-5xl">
-                        {gameState().cardState[currentPlayerNum].hand.length}
+                        {gameState().cardState.player.hand.length}
                     </div>
                     <div class="absolute top-4 right-4 text-5xl">
-                        {gameState().cardState[oppPlayerNum].hand.length}
+                        {gameState().cardState.cpu.hand.length}
                     </div>
                     <Alerts alerts={alerts()} />
-                    <FloatingCards
-                        instructions={floatInstructions()}
-                        cardWidth={cardWidth}
-                    />
-                </>
+                    <FloatingCards instructions={floatInstructions()} cardWidth={cardWidth} />
+                </div>
             }
         </main>
     );

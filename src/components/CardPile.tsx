@@ -1,7 +1,8 @@
-import { createEffect, createSignal, For } from "solid-js";
+import { createEffect, For } from "solid-js";
 import type { Card as CardType, Point } from "../types/types";
 import Card from "./Card";
 import { floatDuration } from "../hooks/useFloatInstr";
+import { twMerge } from "tailwind-merge";
 
 type CardPileProps = {
     cards: CardType[];
@@ -36,35 +37,26 @@ type PileCardProps = {
 };
 
 function PileCard(props: PileCardProps) {
-    const [offset, setOffset] = createSignal<Point>({ x: 0, y: 0 });
-
-    function getOffset(index: number): Point {
-        return {
-            x: -16 * (props.numCards - 1 - index),
-            y: 16 * (props.numCards - 1 - index),
-        };
-    }
-
-    createEffect(() => {
-        setOffset(getOffset(props.index));
-    });
-
-    createEffect(() => {
-        console.log(offset());
-    });
+    const canBeClicked = () => props.index === props.numCards - 1;
 
     return (
         <div
             style={{
                 position: props.index === props.numCards - 1 ? "relative" : "absolute",
                 "z-index": props.index === props.numCards - 1 ? 1000 : props.index,
-                transform: `translate(${offset().x}px, ${offset().y}px)`,
+                transition: `${floatDuration}s ease-in-out`,
+                transform: `translate(${-16 * (props.numCards - 1 - props.index)}px, ${16 * (props.numCards - 1 - props.index)}px)`,
             }}
         >
             <Card
+                class={twMerge(
+                    props.index === props.numCards - 1 && props.card.placedBy === "player"
+                        ? "opacity-0"
+                        : "opacity-100",
+                )}
                 card={props.card}
                 width={props.width}
-                onClick={(pos) => props.onClick(pos, props.card.id)}
+                onClick={canBeClicked() ? (pos) => props.onClick(pos, props.card.id) : undefined}
             />
         </div>
     );
