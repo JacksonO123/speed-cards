@@ -16,25 +16,31 @@ import { floatDuration, useFloatInstr } from "./hooks/useFloatInstr";
 import FloatingCards from "./components/FloatingCards";
 import "./App.css";
 import Card from "./components/Card";
+import GrayButton from "./components/GrayButton";
+import CircleButton from "./components/CircleButton";
+import Add from "./icons/Add";
+import Sub from "./icons/Sub";
 
 type DeckMap = Map<string, number>;
+
+type ChangeEvent = InputEvent & {
+    currentTarget: HTMLInputElement;
+    target: HTMLInputElement;
+};
 
 const NOT_PLACING = 0;
 
 function App() {
     const cardWidth = 180;
     const numPlayerCards = 4;
-    const numDecks = 1;
     const cpuTimeout = 4; // seconds
     const cpuSecondMoveTimeout = 0.5; // seconds
 
-    const [gameState, setGameState] = createSignal(generateInitial(numDecks));
+    const [numDecks, setNumDecks] = createSignal(1);
+    const [gameState, setGameState] = createSignal(generateInitial(numDecks()));
     const [cpuMatches, setCpuMatches] = createSignal(getMatches());
     const [playerMatches, setPlayerMatches] = createSignal(getMatches());
-    const [currentPlacing, setCurrentPlacing] = createSignal<MatchInfo>({
-        number: NOT_PLACING,
-        id: "",
-    });
+    const [currentPlacing, setCurrentPlacing] = createSignal<number>(NOT_PLACING);
     const [alerts, addAlert] = useAlerts();
     const [cpuInterval, setCpuInterval] = createSignal(-1);
 
@@ -139,25 +145,26 @@ function App() {
     }
 
     function handleCardClick(pileClickLocation: PileClickLocation, id: string, toPos: Point) {
-        console.log("clicking");
         const deckRef = topDeckRef();
-        if (!deckRef || currentPlacing().id === id) return;
+        if (!deckRef) return;
 
-        const allPiles = [...gameState().cardState.player.side, ...gameState().cardState.cpu.side];
-        const cardStack = allPiles.find((item) => item[item.length - 1].id === id);
-        if (!cardStack) return;
-        const card = cardStack[cardStack.length - 1];
-        console.log({ suit: card.suit, number: card.number });
+        const topCards = [
+            ...gameState().cardState.player.side,
+            ...gameState().cardState.cpu.side,
+        ].map((pile) => pile[pile.length - 1]);
+        const card = topCards.find((item) => item.id === id);
+        if (!card) return;
 
         let allMatches = [...playerMatches(), ...cpuMatches()];
+        const isInMatches = allMatches.find((item) => item.id === id);
 
-        if (currentPlacing().number === NOT_PLACING || !allMatches.find((item) => item.id === id)) {
+        if (
+            currentPlacing() === NOT_PLACING ||
+            !(isInMatches && currentPlacing() === card.number)
+        ) {
             const newMatches = getMatches();
             setPlayerMatches(newMatches);
-            setCurrentPlacing((prev) => {
-                prev.number = card.number;
-                return { ...prev };
-            });
+            setCurrentPlacing(card.number);
             allMatches = [...playerMatches(), ...cpuMatches()];
         }
 
@@ -167,14 +174,10 @@ function App() {
         if (!includesCard) {
             const newMatches = getMatches();
             setPlayerMatches(newMatches);
-            setCurrentPlacing((prev) => {
-                prev.number = card.number;
-                return { ...prev };
-            });
+            setCurrentPlacing(card.number);
             return;
         }
 
-        const topCards = allPiles.map((pile) => pile[pile.length - 1]);
         const newGameState = gameState();
         for (let i = 0; i < topCards.length; i++) {
             if (topCards[i].id === id) {
@@ -388,7 +391,7 @@ function App() {
     });
 
     function restartGame() {
-        setGameState(generateInitial(numDecks));
+        setGameState(generateInitial(numDecks()));
         startCpuLoop();
     }
 
@@ -430,6 +433,11 @@ function App() {
         }
     });
 
+    function handleNumDecksChange(e: ChangeEvent) {
+        const newNum = e.currentTarget.valueAsNumber;
+        setNumDecks(newNum);
+    }
+
     const preloadCards: CardType[] = [
         { id: "", number: 11, suit: "clubs", placedBy: "none" },
         { id: "", number: 11, suit: "hearts", placedBy: "none" },
@@ -457,12 +465,7 @@ function App() {
             {gameState().wonBy !== null && (
                 <div class="flex flex-col gap-4 items-center absolute top-0 left-0 bottom-0 right-0 bg-transparent animate-backdrop z-3000 justify-center">
                     {gameState().wonBy === "player" ? <h1>You Won!</h1> : <h1>You Lost</h1>}
-                    <button
-                        onClick={restartGame}
-                        class="bg-neutral-200 px-8 py-4 rounded-xl cursor-pointer border-2 border-neutral-400 text-neutral-500 duration-150 hover:text-neutral-600 hover:border-neutral-500"
-                    >
-                        Restart
-                    </button>
+                    <GrayButton onClick={restartGame}>Restart</GrayButton>
                 </div>
             )}
             {
@@ -471,18 +474,34 @@ function App() {
                         <div class="flex gap-8">{cpuCardEls()}</div>
                         <div class="flex gap-8">{playerCardEls()}</div>
                     </div>
-                    <div class="h-20 flex justify-center gap-6 z-1000">
+                    <div class="h-20 flex justify-center gap-6 z-1000 items-start">
                         <DeckGraphic
                             numCards={gameState().cardState.player.hand.length}
                             width={cardWidth}
                             setDeckRef={handleSetDeckRef}
                         />
-                        <button
-                            onClick={tryNewCards}
-                            class="bg-neutral-200 px-8 py-4 rounded-xl cursor-pointer border-2 border-neutral-400 text-neutral-500 duration-150 hover:text-neutral-600 hover:border-neutral-500"
-                        >
+                        <GrayButton class="px-8 py-4" onClick={tryNewCards}>
                             No Matches
-                        </button>
+                        </GrayButton>
+                    </div>
+                    <div class="absolute left-4 top-4 border-2 border-neutral-700 rounded-xl p-2 flex flex-col gap-2 bg-white">
+                        <div class="flex gap-2 items-center">
+                            <CircleButton
+                                onClick={() => setNumDecks((prev) => Math.max(0, prev - 1))}
+                            >
+                                <Sub />
+                            </CircleButton>
+                            <input
+                                class="w-20 border-2 border-neutral-700 rounded-xl h-10 text-center text-xl font-semibold"
+                                type="number"
+                                value={numDecks()}
+                                onInput={handleNumDecksChange}
+                            />
+                            <CircleButton onClick={() => setNumDecks((prev) => prev + 1)}>
+                                <Add />
+                            </CircleButton>
+                        </div>
+                        <GrayButton onClick={restartGame}>Update</GrayButton>
                     </div>
                     <div class="absolute left-4 bottom-4 text-5xl">
                         {gameState().cardState.player.hand.length}
