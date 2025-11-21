@@ -6,7 +6,7 @@ import type {
     Point,
     Suit,
 } from "./types/types";
-import { createEffect, createSignal, onCleanup, onMount, type JSXElement } from "solid-js";
+import { createEffect, createSignal, onMount, type JSXElement } from "solid-js";
 import Alerts from "./components/Alerts";
 import { useAlerts } from "./hooks/useAlerts";
 import CardPile from "./components/CardPile";
@@ -36,7 +36,7 @@ function App() {
     const minDecks = 1;
     const maxDecks = 100;
     const numPlayerCards = 4;
-    const cpuTimeout = 1; // seconds
+    const cpuMoveTimeout = 1; // seconds
     const cpuSecondMoveTimeout = 1; // seconds
 
     const [numDecks, setNumDecks] = createSignal(minDecks);
@@ -44,7 +44,7 @@ function App() {
     const { allMatches, setCpuMatches, setPlayerMatches } = useMatches(getMatches());
     const [currentPlacing, setCurrentPlacing] = createSignal<number>(NOT_PLACING);
 
-    const [cpuInterval, setCpuInterval] = createSignal(-1);
+    const [cpuTimeout, setCpuTimeout] = createSignal(-1);
     const [topDeckRef, setTopDeckRef] = createSignal<HTMLDivElement | undefined>(undefined);
 
     const [alerts, addAlert] = useAlerts();
@@ -127,10 +127,7 @@ function App() {
     function getMatches(): MatchInfo[] {
         const idSet = new Set<string>();
         const matches: MatchInfo[] = [];
-        const topCards = [
-            ...gameState().cardState.player.side,
-            ...gameState().cardState.cpu.side,
-        ].map((pile) => pile[pile.length - 1]);
+        const topCards = getTopCards();
 
         for (let i = 0; i < topCards.length; i++) {
             for (let j = 0; j < topCards.length; j++) {
@@ -138,6 +135,7 @@ function App() {
 
                 if (topCards[i].number == topCards[j].number) {
                     if (!idSet.has(topCards[i].id)) {
+                        idSet.add(topCards[i].id);
                         matches.push({
                             number: topCards[j].number,
                             id: topCards[j].id,
@@ -154,10 +152,7 @@ function App() {
         const deckRef = topDeckRef();
         if (!deckRef) return;
 
-        const topCards = [
-            ...gameState().cardState.player.side,
-            ...gameState().cardState.cpu.side,
-        ].map((pile) => pile[pile.length - 1]);
+        const topCards = getTopCards();
         const card = topCards.find((item) => item.id === id);
         if (!card) return;
 
@@ -218,12 +213,9 @@ function App() {
         let hasMatches = getMatches().length > 0;
 
         const currentCpuMatches = allMatches();
-        const allCards = [
-            ...gameState().cardState.player.side,
-            ...gameState().cardState.cpu.side,
-        ].map((pile) => pile[pile.length - 1]);
+        const topCards = getTopCards();
         for (const match of currentCpuMatches) {
-            if (allCards.find((item) => item.id === match.id)) {
+            if (topCards.find((item) => item.id === match.id)) {
                 hasMatches = true;
                 break;
             }
@@ -253,15 +245,14 @@ function App() {
         });
 
         setGameState({ ...currentGameState });
+
+        startCpuLoop();
     }
 
     /// return null if game won, true if card placed, false if not placed
     function cpuPutCard(pileLocation: PileClickLocation, cardId: string): boolean | null {
         const newGameState = gameState();
-        const topCards = [
-            ...newGameState.cardState.player.side,
-            ...newGameState.cardState.cpu.side,
-        ].map((pile) => pile[pile.length - 1]);
+        const topCards = getTopCards();
         for (let i = 0; i < topCards.length; i++) {
             if (topCards[i].id === cardId) {
                 const hand = newGameState.cardState.cpu.hand;
@@ -285,10 +276,7 @@ function App() {
     }
 
     function getPileLocation(cardId: string): PileClickLocation | null {
-        const topCards = [
-            ...gameState().cardState.cpu.side,
-            ...gameState().cardState.player.side,
-        ].map((pile) => pile[pile.length - 1]);
+        const topCards = getTopCards();
         for (let i = 0; i < topCards.length; i++) {
             if (topCards[i].id === cardId) {
                 return {
@@ -301,26 +289,71 @@ function App() {
         return null;
     }
 
+    function getTopCards() {
+        return [...gameState().cardState.cpu.side, ...gameState().cardState.player.side].map(
+            (pile) => pile[pile.length - 1],
+        );
+    }
+
+    function getMatchingSet(card: MatchInfo): MatchInfo[] {
+        const res: MatchInfo[] = [];
+        const topCards = getTopCards();
+
+        for (let i = 0; i < topCards.length; i++) {
+            if (topCards[i].number === card.number) {
+                res.push(topCards[i]);
+            }
+        }
+
+        return res;
+    }
+
     function cpuMakeMove() {
         console.log("making move");
 
-        // check if any of the current cpu matches are on the
-        // top cards, if they are keep them and make that move
-        // otherwise find new matches
         setCpuMatches(getMatches());
-        const currentMatches = randomizeArr(allMatches());
+        const topCards = getTopCards().map((card) => card.id);
+        const activeMatches = allMatches().filter((item) => topCards.includes(item.id));
+        const currentMatches = randomizeArr(activeMatches);
         if (currentMatches.length === 0) return;
+        const startCard = currentMatches[Math.floor(Math.random() * currentMatches.length)];
+        const matchingSet = getMatchingSet(startCard);
 
-        const first = currentMatches[Math.floor(Math.random() * currentMatches.length)];
-        let pileLocation = getPileLocation(first.id)!;
+        const card = matchingSet[0];
+        cpuPutCard(getPileLocation(card.id)!, card.id);
 
-        cpuPutCard(pileLocation, first.id);
+        function attemptCard(index: number) {
+            if (index >= matchingSet.length) return;
+
+            const card = matchingSet[index];
+            const pileLocation = getPileLocation(card.id);
+            if (!pileLocation) {
+                attemptCard(index + 1);
+                return;
+            }
+
+            const res = cpuPutCard(pileLocation, card.id);
+            if (res === null) return;
+            if (!res) attemptCard(index + 1);
+
+            const timeout = setTimeout(() => {
+                const newIndex = index + 1;
+                if (newIndex >= matchingSet.length) startCpuLoop();
+                else attemptCard(index + 1);
+            }, cpuSecondMoveTimeout * 1000);
+            setCpuTimeout(timeout);
+        }
+
+        const timeout = setTimeout(() => {
+            attemptCard(1);
+        }, cpuSecondMoveTimeout * 1000);
+        setCpuTimeout(timeout);
     }
 
     createEffect(() => {
-        const interval = cpuInterval();
+        const timeout = cpuTimeout();
         if (gameState().wonBy !== null) {
-            clearInterval(interval);
+            clearTimeout(timeout);
         }
     });
 
@@ -349,29 +382,20 @@ function App() {
     }
 
     function startCpuLoop() {
-        return setInterval(
-            () => {
-                cpuMakeMove();
-                setTimeout(() => {
-                    cpuMakeMove();
-                }, cpuSecondMoveTimeout * 1000);
-            },
-            cpuTimeout * 1000 + cpuSecondMoveTimeout * 1000,
-        );
+        const timeout = setTimeout(() => {
+            cpuMakeMove();
+        }, cpuMoveTimeout * 1000);
+        setCpuTimeout(timeout);
     }
 
     onMount(() => {
-        const interval = startCpuLoop();
-        setCpuInterval(interval);
-        onCleanup(() => {
-            clearInterval(interval);
-        });
+        startCpuLoop();
     });
 
     function restartGame() {
-        clearInterval(cpuInterval());
+        clearTimeout(cpuTimeout());
         setGameState(generateInitial(numDecks()));
-        setCpuInterval(startCpuLoop());
+        startCpuLoop();
     }
 
     function handleSetDeckRef(ref: HTMLDivElement) {
