@@ -6,7 +6,14 @@ import type {
     Point,
     Suit,
 } from "./types/types";
-import { createEffect, createRoot, createSignal, onMount, type JSXElement } from "solid-js";
+import {
+    createEffect,
+    createRoot,
+    createSignal,
+    onMount,
+    untrack,
+    type JSXElement,
+} from "solid-js";
 import Alerts from "./components/Alerts";
 import { useAlerts } from "./hooks/useAlerts";
 import CardPile from "./components/CardPile";
@@ -22,6 +29,7 @@ import Sub from "./icons/Sub";
 import Popup from "./components/Popup";
 import { useMatches } from "./hooks/useMatches";
 import LabelInput from "./components/LabelInput";
+import { twMerge } from "tailwind-merge";
 
 type DeckMap = Map<string, number>;
 
@@ -39,6 +47,7 @@ function App() {
     const minNumPlayerCards = 2;
     const maxNumPlayerCards = 8;
 
+    const [started, setStarted] = createSignal(false);
     const [numPlayerCards, setNumPlayerCards] = createSignal(4);
     const [cpuMoveTimeout, _setCpuMoveTimeout] = createSignal(1);
     const [cpuSecondMoveTimeout, _setCpuSecondMoveTimeout] = createSignal(1);
@@ -364,13 +373,6 @@ function App() {
         setCpuTimeout(timeout);
     }
 
-    createEffect(() => {
-        const timeout = cpuTimeout();
-        if (gameState().wonBy !== null) {
-            clearTimeout(timeout);
-        }
-    });
-
     function deferResetPlacedBy(card: CardType) {
         setTimeout(() => {
             card.placedBy = "none";
@@ -389,7 +391,6 @@ function App() {
     function restartGame() {
         clearTimeout(cpuTimeout());
         setGameState(generateInitial(numDecks()));
-        startCpuLoop();
         pileDispose()();
         setSideCardEls();
     }
@@ -439,8 +440,20 @@ function App() {
     }
 
     onMount(() => {
-        startCpuLoop();
         setSideCardEls();
+    });
+
+    createEffect(() => {
+        if (started()) {
+            untrack(() => startCpuLoop());
+        }
+    });
+
+    createEffect(() => {
+        const timeout = cpuTimeout();
+        if (gameState().wonBy !== null) {
+            clearTimeout(timeout);
+        }
     });
 
     function handleNumDecksChange(e: ChangeEvent) {
@@ -455,6 +468,7 @@ function App() {
     }
 
     function updateGame() {
+        setStarted(false);
         restartGame();
         setShowingPopup(false);
     }
@@ -464,6 +478,14 @@ function App() {
         numCards = isNaN(numCards) ? minNumPlayerCards : numCards;
         const newNum = Math.min(maxNumPlayerCards, Math.max(minNumPlayerCards, numCards));
         setNumPlayerCards(newNum);
+    }
+
+    function startOrTryNewCards() {
+        if (started()) {
+            tryNewCards();
+        } else {
+            setStarted(true);
+        }
     }
 
     const preloadCards: CardType[] = [
@@ -591,8 +613,15 @@ function App() {
                         width={cardWidth}
                         setDeckRef={handleSetDeckRef}
                     />
-                    <GrayButton class="px-8 py-4" onClick={tryNewCards}>
-                        No Matches
+                    <GrayButton
+                        class={twMerge(
+                            "px-8 py-4",
+                            !started() &&
+                                "bg-green-100 border-green-600 text-green-600 hover:bg-green-200",
+                        )}
+                        onClick={startOrTryNewCards}
+                    >
+                        {started() ? "No Matches" : "Start"}
                     </GrayButton>
                 </div>
                 <div class="absolute left-4 bottom-4 text-5xl z-3000">
