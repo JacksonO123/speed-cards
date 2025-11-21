@@ -39,6 +39,12 @@ type PileCardProps = {
 function PileCard(props: PileCardProps) {
     const canBeClicked = () => props.index === props.numCards - 1;
 
+    function handleClick(pos: Point) {
+        if (canBeClicked()) {
+            props.onClick(pos, props.card.id);
+        }
+    }
+
     return (
         <div
             style={{
@@ -56,7 +62,7 @@ function PileCard(props: PileCardProps) {
                 )}
                 card={props.card}
                 width={props.width}
-                onClick={canBeClicked() ? (pos) => props.onClick(pos, props.card.id) : undefined}
+                onClick={handleClick}
             />
         </div>
     );

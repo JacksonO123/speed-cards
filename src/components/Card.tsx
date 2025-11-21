@@ -6,6 +6,12 @@ import clubsSrc from "../assets/clubs.png";
 import heartsSrc from "../assets/heart.png";
 import diamondsSrc from "../assets/diamonds.png";
 import spadesSrc from "../assets/spades.svg";
+import type { DOMElement } from "solid-js/jsx-runtime";
+
+type ClickEvent = MouseEvent & {
+    currentTarget: HTMLDivElement;
+    target: DOMElement;
+};
 
 type CardProps = {
     width?: number;
@@ -155,6 +161,11 @@ export default function Card(props: CardProps) {
         return { x: rect.x, y: rect.y };
     }
 
+    function handleClick(e: ClickEvent) {
+        e.stopPropagation();
+        props.onClick?.(getPos());
+    }
+
     return (
         <div
             // @ts-ignore
@@ -168,8 +179,7 @@ export default function Card(props: CardProps) {
                       : null,
                 props.class,
             )}
-            onMouseDown={() => props.onClick?.(getPos())}
-            // onClick={}
+            onMouseDown={handleClick}
             style={{
                 width: `${width}px`,
                 "min-width": `${width}px`,

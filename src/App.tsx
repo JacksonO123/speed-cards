@@ -147,8 +147,8 @@ function App() {
                 if (i === j) continue;
 
                 if (topCards[i].number == topCards[j].number) {
-                    if (!idSet.has(topCards[i].id)) {
-                        idSet.add(topCards[i].id);
+                    if (!idSet.has(topCards[j].id)) {
+                        idSet.add(topCards[j].id);
                         matches.push({
                             number: topCards[j].number,
                             id: topCards[j].id,
@@ -180,7 +180,6 @@ function App() {
         }
 
         const isInMatches = allMatches().find((item) => item.id === id);
-
         if (!isInMatches || currentPlacing() === NOT_PLACING || currentPlacing() !== card.number) {
             setPlayerMatches(getMatches());
         }
@@ -608,7 +607,7 @@ function App() {
                                         )
                                     }
                                 >
-                                    <Sub />
+                                    <Add />
                                 </CircleButton>
                             </div>
                         </div>
