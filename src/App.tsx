@@ -2,7 +2,6 @@ import type {
     Card as CardType,
     GameState,
     MatchInfo,
-    MatchLocationInfo,
     PileClickLocation,
     Point,
     Suit,
@@ -285,15 +284,6 @@ function App() {
         return false;
     }
 
-    function getMatchTo(info: MatchInfo, matches: MatchInfo[]): MatchLocationInfo | null {
-        for (let i = 0; i < matches.length; i++) {
-            if (matches[i].id === info.id) continue;
-            if (matches[i].number === info.number) return { match: matches[i], index: i };
-        }
-
-        return null;
-    }
-
     function getPileLocation(cardId: string): PileClickLocation | null {
         const topCards = [
             ...gameState().cardState.cpu.side,
@@ -323,14 +313,6 @@ function App() {
 
         const first = currentMatches[Math.floor(Math.random() * currentMatches.length)];
         let pileLocation = getPileLocation(first.id)!;
-        var second: MatchLocationInfo;
-
-        for (let i = 0; i < currentMatches.length; i++) {
-            if (currentMatches[i].id === first.id) continue;
-            if (currentMatches[i].number === first.number) {
-                second = { match: currentMatches[i], index: i };
-            }
-        }
 
         cpuPutCard(pileLocation, first.id);
     }
