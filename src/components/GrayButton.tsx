@@ -8,7 +8,7 @@ export default function GrayButton(props: JSX.ButtonHTMLAttributes<HTMLButtonEle
         <button
             {...otherProps}
             class={twMerge(
-                "bg-neutral-100 px-4 py-2 rounded-xl cursor-pointer border-2 border-neutral-700 text-neutral-700 duration-150 hover:bg-neutral-200",
+                "bg-neutral-100 px-4 py-2 rounded-xl cursor-pointer border-2 border-neutral-700 text-neutral-700 duration-150 hover:bg-neutral-200 text-center",
                 classProp.class,
             )}
         />
