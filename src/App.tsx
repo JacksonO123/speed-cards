@@ -161,22 +161,28 @@ function App() {
         return [...matches];
     }
 
+    addEventListener("keydown", (e) => {
+        if (e.key === "k") clearTimeout(cpuTimeout());
+    });
+
     function handleCardClick(pileClickLocation: PileClickLocation, id: string, toPos: Point) {
+        if (!started()) return;
+
         const deckRef = topDeckRef();
-        if (!deckRef) return;
+        if (!deckRef) {
+            return;
+        }
 
         const topCards = getTopCards();
         const card = topCards.find((item) => item.id === id);
-        if (!card) return;
+        if (!card) {
+            return;
+        }
 
         const isInMatches = allMatches().find((item) => item.id === id);
 
-        if (
-            currentPlacing() === NOT_PLACING ||
-            !(isInMatches && currentPlacing() === card.number)
-        ) {
-            const newMatches = getMatches();
-            setPlayerMatches(newMatches);
+        if (!isInMatches || currentPlacing() === NOT_PLACING || currentPlacing() !== card.number) {
+            setPlayerMatches(getMatches());
         }
 
         setCurrentPlacing(card.number);
@@ -389,6 +395,7 @@ function App() {
     }
 
     function restartGame() {
+        setStarted(false);
         clearTimeout(cpuTimeout());
         setGameState(generateInitial(numDecks()));
         pileDispose()();
@@ -468,7 +475,6 @@ function App() {
     }
 
     function updateGame() {
-        setStarted(false);
         restartGame();
         setShowingPopup(false);
     }
