@@ -6,7 +6,7 @@ import type {
     Point,
     Suit,
 } from "./types/types";
-import { createEffect, createSignal, onMount, type JSXElement } from "solid-js";
+import { createEffect, createRoot, createSignal, onMount, type JSXElement } from "solid-js";
 import Alerts from "./components/Alerts";
 import { useAlerts } from "./hooks/useAlerts";
 import CardPile from "./components/CardPile";
@@ -21,6 +21,7 @@ import Add from "./icons/Add";
 import Sub from "./icons/Sub";
 import Popup from "./components/Popup";
 import { useMatches } from "./hooks/useMatches";
+import LabelInput from "./components/LabelInput";
 
 type DeckMap = Map<string, number>;
 
@@ -35,10 +36,12 @@ function App() {
     const cardWidth = 180;
     const minDecks = 1;
     const maxDecks = 100;
-    const numPlayerCards = 4;
-    const cpuMoveTimeout = 1; // seconds
-    const cpuSecondMoveTimeout = 1; // seconds
+    const minNumPlayerCards = 2;
+    const maxNumPlayerCards = 8;
 
+    const [numPlayerCards, setNumPlayerCards] = createSignal(4);
+    const [cpuMoveTimeout, _setCpuMoveTimeout] = createSignal(1);
+    const [cpuSecondMoveTimeout, _setCpuSecondMoveTimeout] = createSignal(1);
     const [numDecks, setNumDecks] = createSignal(minDecks);
     const [gameState, setGameState] = createSignal(generateInitial(numDecks()));
     const { allMatches, setCpuMatches, setPlayerMatches } = useMatches(getMatches());
@@ -51,6 +54,7 @@ function App() {
     const [floatInstructions, addFloatInstruction] = useFloatInstr();
 
     const [showingPopup, setShowingPopup] = createSignal(false);
+    const [pileDispose, setPileDispose] = createSignal<() => void>(() => {});
 
     function generateInitial(numDecks: number): GameState {
         const res: GameState = {
@@ -78,10 +82,10 @@ function App() {
         }
 
         res.cardState.player.side = res.cardState.player.hand
-            .splice(0, numPlayerCards)
+            .splice(0, numPlayerCards())
             .map((card) => [card]);
         res.cardState.cpu.side = res.cardState.cpu.hand
-            .splice(0, numPlayerCards)
+            .splice(0, numPlayerCards())
             .map((card) => [card]);
 
         return res;
@@ -155,7 +159,6 @@ function App() {
         const topCards = getTopCards();
         const card = topCards.find((item) => item.id === id);
         if (!card) return;
-        console.log(card.number);
 
         const isInMatches = allMatches().find((item) => item.id === id);
 
@@ -165,8 +168,9 @@ function App() {
         ) {
             const newMatches = getMatches();
             setPlayerMatches(newMatches);
-            setCurrentPlacing(card.number);
         }
+
+        setCurrentPlacing(card.number);
 
         const includesCard = allMatches().find(
             (item) => item.number === card.number && item.id === card.id,
@@ -231,16 +235,22 @@ function App() {
 
         const player1Hand = currentGameState.cardState.player.hand;
         player1Hand.unshift(...currentGameState.cardState.player.side.flat());
-        const player1Top4 = player1Hand.splice(player1Hand.length - 4, 4);
-        currentGameState.cardState.player.side = player1Top4.map((card) => {
+        const player1TopN = player1Hand.splice(
+            player1Hand.length - numPlayerCards(),
+            numPlayerCards(),
+        );
+        currentGameState.cardState.player.side = player1TopN.map((card) => {
             card.placedBy = "none";
             return [card];
         });
 
         const player2Hand = currentGameState.cardState.cpu.hand;
         player2Hand.unshift(...currentGameState.cardState.cpu.side.flat());
-        const player2Top4 = player2Hand.splice(player2Hand.length - 4, 4);
-        currentGameState.cardState.cpu.side = player2Top4.map((card) => {
+        const player2TopN = player2Hand.splice(
+            player2Hand.length - numPlayerCards(),
+            numPlayerCards(),
+        );
+        currentGameState.cardState.cpu.side = player2TopN.map((card) => {
             card.placedBy = "none";
             return [card];
         });
@@ -281,8 +291,8 @@ function App() {
         for (let i = 0; i < topCards.length; i++) {
             if (topCards[i].id === cardId) {
                 return {
-                    side: i > 3 ? "player" : "cpu",
-                    index: i % 4,
+                    side: i >= numPlayerCards() ? "player" : "cpu",
+                    index: i % numPlayerCards(),
                 };
             }
         }
@@ -310,8 +320,6 @@ function App() {
     }
 
     function cpuMakeMove() {
-        console.log("making move");
-
         setCpuMatches(getMatches());
         const topCards = getTopCards().map((card) => card.id);
         const activeMatches = allMatches().filter((item) => topCards.includes(item.id));
@@ -346,13 +354,13 @@ function App() {
                 const newIndex = index + 1;
                 if (newIndex >= matchingSet.length) startCpuLoop();
                 else attemptCard(index + 1);
-            }, cpuSecondMoveTimeout * 1000);
+            }, cpuSecondMoveTimeout() * 1000);
             setCpuTimeout(timeout);
         }
 
         const timeout = setTimeout(() => {
             attemptCard(1);
-        }, cpuSecondMoveTimeout * 1000);
+        }, cpuSecondMoveTimeout() * 1000);
         setCpuTimeout(timeout);
     }
 
@@ -374,18 +382,16 @@ function App() {
         clearTimeout(cpuTimeout());
         const timeout = setTimeout(() => {
             cpuMakeMove();
-        }, cpuMoveTimeout * 1000);
+        }, cpuMoveTimeout() * 1000);
         setCpuTimeout(timeout);
     }
-
-    onMount(() => {
-        startCpuLoop();
-    });
 
     function restartGame() {
         clearTimeout(cpuTimeout());
         setGameState(generateInitial(numDecks()));
         startCpuLoop();
+        pileDispose()();
+        setSideCardEls();
     }
 
     function handleSetDeckRef(ref: HTMLDivElement) {
@@ -395,35 +401,46 @@ function App() {
     const [cpuCardEls, setCpuCardEls] = createSignal<JSXElement[]>([]);
     const [playerCardEls, setPlayerCardEls] = createSignal<JSXElement[]>([]);
 
+    function setSideCardEls() {
+        createRoot((dispose) => {
+            {
+                const res: JSXElement[] = [];
+                for (let i = 0; i < gameState().cardState.cpu.side.length; i++) {
+                    res.push(
+                        <CardPile
+                            cards={gameState().cardState.cpu.side[i]}
+                            width={cardWidth}
+                            onClick={(pos, id) =>
+                                handleCardClick({ side: "cpu", index: i }, id, pos)
+                            }
+                        />,
+                    );
+                }
+                setCpuCardEls(res);
+            }
+            {
+                const res: JSXElement[] = [];
+                for (let i = 0; i < gameState().cardState.player.side.length; i++) {
+                    res.push(
+                        <CardPile
+                            cards={gameState().cardState.player.side[i]}
+                            width={cardWidth}
+                            onClick={(pos, id) =>
+                                handleCardClick({ side: "player", index: i }, id, pos)
+                            }
+                        />,
+                    );
+                }
+                setPlayerCardEls(res);
+            }
+
+            setPileDispose(() => dispose);
+        });
+    }
+
     onMount(() => {
-        {
-            const res: JSXElement[] = [];
-            for (let i = 0; i < gameState().cardState.cpu.side.length; i++) {
-                res.push(
-                    <CardPile
-                        cards={gameState().cardState.cpu.side[i]}
-                        width={cardWidth}
-                        onClick={(pos, id) => handleCardClick({ side: "cpu", index: i }, id, pos)}
-                    />,
-                );
-            }
-            setCpuCardEls(res);
-        }
-        {
-            const res: JSXElement[] = [];
-            for (let i = 0; i < gameState().cardState.player.side.length; i++) {
-                res.push(
-                    <CardPile
-                        cards={gameState().cardState.player.side[i]}
-                        width={cardWidth}
-                        onClick={(pos, id) =>
-                            handleCardClick({ side: "player", index: i }, id, pos)
-                        }
-                    />,
-                );
-            }
-            setPlayerCardEls(res);
-        }
+        startCpuLoop();
+        setSideCardEls();
     });
 
     function handleNumDecksChange(e: ChangeEvent) {
@@ -433,13 +450,20 @@ function App() {
         setNumDecks(newNum);
     }
 
-    function handleChangeDecks() {
+    function handleUpdateGame() {
         setShowingPopup(true);
     }
 
-    function changeDecks() {
+    function updateGame() {
         restartGame();
         setShowingPopup(false);
+    }
+
+    function handleUpdateNumPlayerCards(e: ChangeEvent) {
+        let numCards = e.currentTarget.valueAsNumber;
+        numCards = isNaN(numCards) ? minNumPlayerCards : numCards;
+        const newNum = Math.min(maxNumPlayerCards, Math.max(minNumPlayerCards, numCards));
+        setNumPlayerCards(newNum);
     }
 
     const preloadCards: CardType[] = [
@@ -484,7 +508,7 @@ function App() {
                                 Changing the number of decks will restart the game, are you sure?
                             </h1>
                             <div class="flex gap-4 items-start">
-                                <GrayButton onClick={changeDecks}>
+                                <GrayButton onClick={updateGame}>
                                     Yes, change the number of decks so that I can play this game
                                     with a new number of decks that I have just put in the thing and
                                     am ready to play it
@@ -505,25 +529,62 @@ function App() {
                 </div>
                 <div class="h-20 flex justify-center gap-6 z-1000 items-start">
                     <div class="border-2 border-neutral-700 rounded-[20px] p-2 flex flex-col gap-2 bg-white mr-4">
-                        <div class="flex gap-2 items-center">
-                            <CircleButton
-                                onClick={() => setNumDecks((prev) => Math.max(minDecks, prev - 1))}
-                            >
-                                <Sub />
-                            </CircleButton>
-                            <input
-                                class="w-20 border-2 border-neutral-700 rounded-xl h-10 text-center text-xl font-semibold"
-                                type="number"
-                                value={numDecks()}
-                                onInput={handleNumDecksChange}
-                            />
-                            <CircleButton
-                                onClick={() => setNumDecks((prev) => Math.min(maxDecks, prev + 1))}
-                            >
-                                <Add />
-                            </CircleButton>
+                        <div class="flex gap-4 items-center">
+                            <div class="flex gap-2 items-center">
+                                <CircleButton
+                                    class="translate-y-2"
+                                    onClick={() =>
+                                        setNumDecks((prev) => Math.max(minDecks, prev - 1))
+                                    }
+                                >
+                                    <Sub />
+                                </CircleButton>
+                                <LabelInput
+                                    label="# Decks"
+                                    type="number"
+                                    value={numDecks()}
+                                    onInput={handleNumDecksChange}
+                                />
+                                <CircleButton
+                                    class="translate-y-2"
+                                    onClick={() =>
+                                        setNumDecks((prev) => Math.min(maxDecks, prev + 1))
+                                    }
+                                >
+                                    <Add />
+                                </CircleButton>
+                            </div>
+                            <div class="w-0.5 rounded-full h-10 bg-neutral-700" />
+                            <div class="flex gap-2 items-center">
+                                <CircleButton
+                                    class="translate-y-2"
+                                    onClick={() =>
+                                        setNumPlayerCards((prev) =>
+                                            Math.max(minNumPlayerCards, prev - 1),
+                                        )
+                                    }
+                                >
+                                    <Sub />
+                                </CircleButton>
+                                <LabelInput
+                                    label="# Side Cards"
+                                    type="number"
+                                    value={numPlayerCards()}
+                                    onInput={handleUpdateNumPlayerCards}
+                                />
+                                <CircleButton
+                                    class="translate-y-2"
+                                    onClick={() =>
+                                        setNumPlayerCards((prev) =>
+                                            Math.min(maxNumPlayerCards, prev + 1),
+                                        )
+                                    }
+                                >
+                                    <Sub />
+                                </CircleButton>
+                            </div>
                         </div>
-                        <GrayButton onClick={handleChangeDecks}>Update</GrayButton>
+                        <GrayButton onClick={handleUpdateGame}>Update</GrayButton>
                     </div>
                     <DeckGraphic
                         numCards={gameState().cardState.player.hand.length}
@@ -534,10 +595,10 @@ function App() {
                         No Matches
                     </GrayButton>
                 </div>
-                <div class="absolute left-4 bottom-4 text-5xl">
+                <div class="absolute left-4 bottom-4 text-5xl z-3000">
                     {gameState().cardState.player.hand.length}
                 </div>
-                <div class="absolute top-4 right-4 text-5xl">
+                <div class="absolute top-4 right-4 text-5xl z-3000">
                     {gameState().cardState.cpu.hand.length}
                 </div>
                 <div class="absolute right-3 bottom-2">By Jackson Otto</div>
