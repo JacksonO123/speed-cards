@@ -6,7 +6,6 @@ export function useMatches(defaultMatches: MatchInfo[]) {
     const [playerMatches, setPlayerMatches] = createSignal(defaultMatches);
 
     function allMatches() {
-        console.log(cpuMatches(), playerMatches());
         return [...cpuMatches(), ...playerMatches()];
     }
 

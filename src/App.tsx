@@ -155,6 +155,7 @@ function App() {
         const topCards = getTopCards();
         const card = topCards.find((item) => item.id === id);
         if (!card) return;
+        console.log(card.number);
 
         const isInMatches = allMatches().find((item) => item.id === id);
 
@@ -314,16 +315,21 @@ function App() {
         setCpuMatches(getMatches());
         const topCards = getTopCards().map((card) => card.id);
         const activeMatches = allMatches().filter((item) => topCards.includes(item.id));
-        const currentMatches = randomizeArr(activeMatches);
-        if (currentMatches.length === 0) return;
-        const startCard = currentMatches[Math.floor(Math.random() * currentMatches.length)];
+        if (activeMatches.length === 0) {
+            startCpuLoop();
+            return;
+        }
+        const startCard = activeMatches[Math.floor(Math.random() * activeMatches.length)];
         const matchingSet = getMatchingSet(startCard);
 
         const card = matchingSet[0];
         cpuPutCard(getPileLocation(card.id)!, card.id);
 
         function attemptCard(index: number) {
-            if (index >= matchingSet.length) return;
+            if (index >= matchingSet.length) {
+                startCpuLoop();
+                return;
+            }
 
             const card = matchingSet[index];
             const pileLocation = getPileLocation(card.id);
@@ -357,23 +363,6 @@ function App() {
         }
     });
 
-    function randomizeArr<T>(arr: T[]): T[] {
-        const temp = [...arr];
-
-        for (let i = 0; i < temp.length; i++) {
-            let randIndex = i;
-            while (randIndex === i) {
-                randIndex = Math.floor(Math.random() * temp.length);
-            }
-
-            const val = temp[randIndex];
-            temp[randIndex] = temp[i];
-            temp[i] = val;
-        }
-
-        return temp;
-    }
-
     function deferResetPlacedBy(card: CardType) {
         setTimeout(() => {
             card.placedBy = "none";
@@ -382,6 +371,7 @@ function App() {
     }
 
     function startCpuLoop() {
+        clearTimeout(cpuTimeout());
         const timeout = setTimeout(() => {
             cpuMakeMove();
         }, cpuMoveTimeout * 1000);
