@@ -27,6 +27,7 @@ import { useMatches } from "./hooks/useMatches";
 import Controls from "./components/Controls";
 import { minDecks } from "./constants/game";
 import backFace from "./assets/back-face.png";
+import { useLocalStorage } from "./hooks/useLocalStorage";
 
 type DeckMap = Map<string, number>;
 
@@ -36,10 +37,10 @@ function App() {
     const cardWidth = 180;
 
     const [started, setStarted] = createSignal(false);
-    const [numPlayerCards, setNumPlayerCards] = createSignal(4);
-    const [cpuMoveTimeout, setCpuMoveTimeout] = createSignal(1);
-    const [cpu2ndMoveTimeout, setCpu2ndMoveTimeout] = createSignal(1);
-    const [numDecks, setNumDecks] = createSignal(minDecks);
+    const [numPlayerCards, setNumPlayerCards] = useLocalStorage(4, "num-player-cards");
+    const [cpuMoveTimeout, setCpuMoveTimeout] = useLocalStorage(1, "cpu-timeout");
+    const [cpu2ndMoveTimeout, setCpu2ndMoveTimeout] = useLocalStorage(1, "cpu-2nd-timeout");
+    const [numDecks, setNumDecks] = useLocalStorage(minDecks, "num-decks");
     const [gameState, setGameState] = createSignal(generateInitial(numDecks()));
     const { allMatches, setCpuMatches, setPlayerMatches } = useMatches(getMatches());
     const [currentPlacing, setCurrentPlacing] = createSignal<number>(NOT_PLACING);
