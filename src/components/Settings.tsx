@@ -70,9 +70,9 @@ export default function Settings(props: SettingsProps) {
                         style={{
                             transform:
                                 showing() === "deck-settings"
-                                    ? "translateY(0px)"
+                                    ? "translateY(-76px)"
                                     : showing() === "timeout-settings"
-                                      ? "translateY(-76px)"
+                                      ? "translateY(0px)"
                                       : undefined,
                         }}
                     >
