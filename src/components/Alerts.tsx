@@ -22,7 +22,7 @@ export default function Alerts(props: AlertsProps) {
                         style={{
                             height: item.active ? `${height}px` : undefined,
                             "margin-top": item.active ? "16px" : undefined,
-                            "z-index": 1500,
+                            "z-index": 20000,
                         }}
                     >
                         <div

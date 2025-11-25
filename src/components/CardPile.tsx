@@ -5,6 +5,7 @@ import { floatDuration } from "../hooks/useFloatInstr";
 import { twMerge } from "tailwind-merge";
 
 type CardPileProps = {
+    zBasis: number;
     cards: CardType[];
     width: number;
     onClick: (pos: Point, id: string) => void;
@@ -21,6 +22,7 @@ export default function CardPile(props: CardPileProps) {
                         width={props.width}
                         onClick={props.onClick}
                         numCards={props.cards.length}
+                        zBasis={props.zBasis}
                     />
                 )}
             </For>
@@ -29,6 +31,7 @@ export default function CardPile(props: CardPileProps) {
 }
 
 type PileCardProps = {
+    zBasis: number;
     index: number;
     card: CardType;
     numCards: number;
@@ -49,7 +52,7 @@ function PileCard(props: PileCardProps) {
         <div
             style={{
                 position: props.index === props.numCards - 1 ? "relative" : "absolute",
-                "z-index": props.index === props.numCards - 1 ? 1000 : props.index,
+                "z-index": props.index === props.numCards - 1 ? 19000 : props.zBasis + props.index,
                 transition: `${floatDuration}s ease-in-out`,
                 transform: `translate(${-16 * (props.numCards - 1 - props.index)}px, ${16 * (props.numCards - 1 - props.index)}px)`,
             }}

@@ -38,7 +38,7 @@ function Instruction(props: { instr: FloatInstr; cardWidth: number }) {
             style={{
                 left: `${position().x}px`,
                 top: `${position().y}px`,
-                "z-index": 2000,
+                "z-index": 19000,
                 transition: `${floatDuration}s`,
             }}
         >

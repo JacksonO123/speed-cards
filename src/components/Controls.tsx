@@ -24,36 +24,34 @@ type ControlsProps = {
 
 export default function Controls(props: ControlsProps) {
     return (
-        <>
-            <div class="flex justify-center gap-6 z-1000 items-start p-4">
-                <Settings
-                    cpuTimeout={props.cpuTimeout}
-                    cpu2ndTimeout={props.cpu2ndTimeout}
-                    numDecks={props.numDecks}
-                    numPlayerCards={props.numPlayerCards}
-                    updateNumPlayerCards={props.updateNumPlayerCards}
-                    updateNumDecks={props.updateNumDecks}
-                    restartGame={props.restartGame}
-                    setCpuTimeout={props.setCpuTimeout}
-                    setCpu2ndTimeout={props.setCpu2ndTimeout}
-                    setNewTimeoutValues={props.setNewTimeoutValues}
-                />
-                <DeckGraphic
-                    numCards={props.gameState.cardState.player.hand.length}
-                    width={props.cardWidth}
-                    setDeckRef={props.setDeckRef}
-                />
-                <GrayButton
-                    class={twMerge(
-                        "px-8 py-4",
-                        !props.started &&
-                            "bg-green-100 border-green-600 text-green-600 hover:bg-green-200",
-                    )}
-                    onClick={props.startOrTryNewCards}
-                >
-                    {props.started ? "No Matches" : "Start"}
-                </GrayButton>
-            </div>
-        </>
+        <div class="flex justify-center gap-6 z-20000 items-start p-4">
+            <Settings
+                cpuTimeout={props.cpuTimeout}
+                cpu2ndTimeout={props.cpu2ndTimeout}
+                numDecks={props.numDecks}
+                numPlayerCards={props.numPlayerCards}
+                updateNumPlayerCards={props.updateNumPlayerCards}
+                updateNumDecks={props.updateNumDecks}
+                restartGame={props.restartGame}
+                setCpuTimeout={props.setCpuTimeout}
+                setCpu2ndTimeout={props.setCpu2ndTimeout}
+                setNewTimeoutValues={props.setNewTimeoutValues}
+            />
+            <DeckGraphic
+                numCards={props.gameState.cardState.player.hand.length}
+                width={props.cardWidth}
+                setDeckRef={props.setDeckRef}
+            />
+            <GrayButton
+                class={twMerge(
+                    "px-8 py-4",
+                    !props.started &&
+                        "bg-green-100 border-green-600 text-green-600 hover:bg-green-200",
+                )}
+                onClick={props.startOrTryNewCards}
+            >
+                {props.started ? "No Matches" : "Start"}
+            </GrayButton>
+        </div>
     );
 }

@@ -401,7 +401,8 @@ function App() {
         createRoot((dispose) => {
             {
                 const res: JSXElement[] = [];
-                for (let i = 0; i < gameState().cardState.cpu.side.length; i++) {
+                const len = gameState().cardState.cpu.side.length;
+                for (let i = 0; i < len; i++) {
                     res.push(
                         <CardPile
                             cards={gameState().cardState.cpu.side[i]}
@@ -409,6 +410,7 @@ function App() {
                             onClick={(pos, id) =>
                                 handleCardClick({ side: "cpu", index: i }, id, pos)
                             }
+                            zBasis={(len - i - 1) * 1000}
                         />,
                     );
                 }
@@ -416,13 +418,17 @@ function App() {
             }
             {
                 const res: JSXElement[] = [];
-                for (let i = 0; i < gameState().cardState.player.side.length; i++) {
+                const len = gameState().cardState.player.side.length;
+                for (let i = 0; i < len; i++) {
                     res.push(
                         <CardPile
                             cards={gameState().cardState.player.side[i]}
                             width={cardWidth}
                             onClick={(pos, id) =>
                                 handleCardClick({ side: "player", index: i }, id, pos)
+                            }
+                            zBasis={
+                                gameState().cardState.cpu.side.length * 1000 + (len - i - 1) * 1000
                             }
                         />,
                     );
@@ -521,10 +527,10 @@ function App() {
                     setCpu2ndTimeout={setCpu2ndMoveTimeout}
                     setNewTimeoutValues={handleSetNewTimeoutValues}
                 />
-                <div class="absolute left-4 bottom-4 text-5xl z-3000">
+                <div class="absolute left-4 bottom-4 text-5xl z-20000">
                     {gameState().cardState.player.hand.length}
                 </div>
-                <div class="absolute top-4 right-4 text-5xl z-3000">
+                <div class="absolute top-4 right-4 text-5xl z-20000">
                     {gameState().cardState.cpu.hand.length}
                 </div>
                 <div class="absolute right-3 bottom-2">By Jackson Otto</div>
