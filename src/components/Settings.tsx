@@ -54,7 +54,10 @@ export default function Settings(props: SettingsProps) {
                                     with a new number of decks that I have just put in the thing and
                                     am ready to play it
                                 </GrayButton>
-                                <GrayButton class="whitespace-nowrap break-keep">
+                                <GrayButton
+                                    class="whitespace-nowrap break-keep"
+                                    onClick={() => setShowingPopup(false)}
+                                >
                                     No, dont to that
                                 </GrayButton>
                             </div>
