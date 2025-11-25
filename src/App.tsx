@@ -26,6 +26,7 @@ import Popup from "./components/Popup";
 import { useMatches } from "./hooks/useMatches";
 import Controls from "./components/Controls";
 import { minDecks } from "./constants/game";
+import backFace from "./assets/back-face.png";
 
 type DeckMap = Map<string, number>;
 
@@ -483,6 +484,7 @@ function App() {
     return (
         <main class="flex justify-center items-center h-screen overflow-hidden">
             <div class="hidden" hidden>
+                <img src={backFace} />
                 {preloadCards.map((card) => (
                     <Card card={card} width={cardWidth} />
                 ))}
