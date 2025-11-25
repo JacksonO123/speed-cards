@@ -34,6 +34,8 @@ type CardSrcData<T> = T extends Suit ? string : SuitInfo;
 
 const defaultWidth = 225;
 
+export const widthToHeightRatio = 300 / 225;
+
 export default function Card(props: CardProps) {
     const width = props.width ?? defaultWidth;
 
@@ -64,7 +66,6 @@ export default function Card(props: CardProps) {
         },
     };
 
-    const widthToHeightRatio = 300 / 225;
     const height = widthToHeightRatio * width;
 
     const formatNum = (num: number) => {
@@ -82,7 +83,18 @@ export default function Card(props: CardProps) {
         }
     };
 
-    const NumComp = () => <span class="w-fit">{formatNum(props.card.number)}</span>;
+    const NumComp = () => (
+        <span
+            class={twMerge(
+                "w-fit",
+                props.card.suit === "hearts" || props.card.suit === "diamonds"
+                    ? "text-[#f00]"
+                    : "text-black",
+            )}
+        >
+            {formatNum(props.card.number)}
+        </span>
+    );
 
     const SuitComp = (suitCompProps: { maxSize?: number; class?: string }) => (
         <img

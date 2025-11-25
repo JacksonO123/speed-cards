@@ -22,7 +22,7 @@ export default function DeckGraphic(props: DeckGraphicProps) {
     );
 
     return (
-        <div class="relative" ref={(el) => props.setDeckRef(el)}>
+        <div class="relative h-0" ref={(el) => props.setDeckRef(el)}>
             {props.numCards > 0 && <Img index={0} />}
             {props.numCards > 1 && <Img abs index={1} />}
             {props.numCards > 2 && <Img abs index={2} />}

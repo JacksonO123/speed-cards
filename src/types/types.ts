@@ -56,3 +56,8 @@ export type PileClickLocation = {
     side: keyof CardState;
     index: number;
 };
+
+export type ChangeEvent = InputEvent & {
+    currentTarget: HTMLInputElement;
+    target: HTMLInputElement;
+};

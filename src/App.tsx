@@ -17,40 +17,27 @@ import {
 import Alerts from "./components/Alerts";
 import { useAlerts } from "./hooks/useAlerts";
 import CardPile from "./components/CardPile";
-import DeckGraphic from "./components/DeckGraphic";
 import { floatDuration, useFloatInstr } from "./hooks/useFloatInstr";
 import FloatingCards from "./components/FloatingCards";
 import "./App.css";
 import Card from "./components/Card";
 import GrayButton from "./components/GrayButton";
-import CircleButton from "./components/CircleButton";
-import Add from "./icons/Add";
-import Sub from "./icons/Sub";
 import Popup from "./components/Popup";
 import { useMatches } from "./hooks/useMatches";
-import LabelInput from "./components/LabelInput";
-import { twMerge } from "tailwind-merge";
+import Controls from "./components/Controls";
+import { minDecks } from "./constants/game";
 
 type DeckMap = Map<string, number>;
-
-type ChangeEvent = InputEvent & {
-    currentTarget: HTMLInputElement;
-    target: HTMLInputElement;
-};
 
 const NOT_PLACING = 0;
 
 function App() {
     const cardWidth = 180;
-    const minDecks = 1;
-    const maxDecks = 100;
-    const minNumPlayerCards = 2;
-    const maxNumPlayerCards = 8;
 
     const [started, setStarted] = createSignal(false);
     const [numPlayerCards, setNumPlayerCards] = createSignal(4);
-    const [cpuMoveTimeout, _setCpuMoveTimeout] = createSignal(1);
-    const [cpuSecondMoveTimeout, _setCpuSecondMoveTimeout] = createSignal(1);
+    const [cpuMoveTimeout, setCpuMoveTimeout] = createSignal(1);
+    const [cpu2ndMoveTimeout, setCpu2ndMoveTimeout] = createSignal(1);
     const [numDecks, setNumDecks] = createSignal(minDecks);
     const [gameState, setGameState] = createSignal(generateInitial(numDecks()));
     const { allMatches, setCpuMatches, setPlayerMatches } = useMatches(getMatches());
@@ -62,7 +49,6 @@ function App() {
     const [alerts, addAlert] = useAlerts();
     const [floatInstructions, addFloatInstruction] = useFloatInstr();
 
-    const [showingPopup, setShowingPopup] = createSignal(false);
     const [pileDispose, setPileDispose] = createSignal<() => void>(() => {});
 
     function generateInitial(numDecks: number): GameState {
@@ -364,17 +350,19 @@ function App() {
             if (res === null) return;
             if (!res) attemptCard(index + 1);
 
-            const timeout = setTimeout(() => {
-                const newIndex = index + 1;
-                if (newIndex >= matchingSet.length) startCpuLoop();
-                else attemptCard(index + 1);
-            }, cpuSecondMoveTimeout() * 1000);
-            setCpuTimeout(timeout);
+            const newIndex = index + 1;
+            if (newIndex >= matchingSet.length) startCpuLoop();
+            else {
+                const timeout = setTimeout(() => {
+                    attemptCard(index + 1);
+                }, cpu2ndMoveTimeout() * 1000);
+                setCpuTimeout(timeout);
+            }
         }
 
         const timeout = setTimeout(() => {
             attemptCard(1);
-        }, cpuSecondMoveTimeout() * 1000);
+        }, cpu2ndMoveTimeout() * 1000);
         setCpuTimeout(timeout);
     }
 
@@ -462,35 +450,17 @@ function App() {
         }
     });
 
-    function handleNumDecksChange(e: ChangeEvent) {
-        let inputNum = e.currentTarget.valueAsNumber;
-        inputNum = isNaN(inputNum) ? minDecks : inputNum;
-        const newNum = Math.min(maxDecks, Math.max(minDecks, inputNum));
-        setNumDecks(newNum);
-    }
-
-    function handleUpdateGame() {
-        setShowingPopup(true);
-    }
-
-    function updateGame() {
-        restartGame();
-        setShowingPopup(false);
-    }
-
-    function handleUpdateNumPlayerCards(e: ChangeEvent) {
-        let numCards = e.currentTarget.valueAsNumber;
-        numCards = isNaN(numCards) ? minNumPlayerCards : numCards;
-        const newNum = Math.min(maxNumPlayerCards, Math.max(minNumPlayerCards, numCards));
-        setNumPlayerCards(newNum);
-    }
-
     function startOrTryNewCards() {
         if (started()) {
             tryNewCards();
         } else {
             setStarted(true);
         }
+    }
+
+    function handleSetNewTimeoutValues(first: number, second: number) {
+        setCpuMoveTimeout(first);
+        setCpu2ndMoveTimeout(second);
     }
 
     const preloadCards: CardType[] = [
@@ -527,108 +497,28 @@ function App() {
                 </Popup>
             )}
 
-            {showingPopup() && (
-                <Popup>
-                    <div class="flex flex-col items-center bg-transparent animate-backdrop justify-center h-full">
-                        <div class="max-w-96 flex flex-col gap-4">
-                            <h1 class="text-center">
-                                Changing the number of decks will restart the game, are you sure?
-                            </h1>
-                            <div class="flex gap-4 items-start">
-                                <GrayButton onClick={updateGame}>
-                                    Yes, change the number of decks so that I can play this game
-                                    with a new number of decks that I have just put in the thing and
-                                    am ready to play it
-                                </GrayButton>
-                                <GrayButton class="whitespace-nowrap break-keep">
-                                    No, dont to that
-                                </GrayButton>
-                            </div>
-                        </div>
-                    </div>
-                </Popup>
-            )}
-
-            <div class="flex flex-col gap-12">
-                <div class="flex flex-col gap-24 h-full justify-center items-center">
+            <div class="flex flex-col gap-12 h-full justify-between">
+                <div class="flex flex-col gap-[6vh] h-full justify-center items-center">
                     <div class="flex gap-8">{cpuCardEls()}</div>
                     <div class="flex gap-8">{playerCardEls()}</div>
                 </div>
-                <div class="h-20 flex justify-center gap-6 z-1000 items-start">
-                    <div class="border-2 border-neutral-700 rounded-[20px] p-2 flex flex-col gap-2 bg-white mr-4">
-                        <div class="flex gap-4 items-center">
-                            <div class="flex gap-2 items-center">
-                                <CircleButton
-                                    class="translate-y-2"
-                                    onClick={() =>
-                                        setNumDecks((prev) => Math.max(minDecks, prev - 1))
-                                    }
-                                >
-                                    <Sub />
-                                </CircleButton>
-                                <LabelInput
-                                    label="# Decks"
-                                    type="number"
-                                    value={numDecks()}
-                                    onInput={handleNumDecksChange}
-                                />
-                                <CircleButton
-                                    class="translate-y-2"
-                                    onClick={() =>
-                                        setNumDecks((prev) => Math.min(maxDecks, prev + 1))
-                                    }
-                                >
-                                    <Add />
-                                </CircleButton>
-                            </div>
-                            <div class="w-0.5 rounded-full h-10 bg-neutral-700" />
-                            <div class="flex gap-2 items-center">
-                                <CircleButton
-                                    class="translate-y-2"
-                                    onClick={() =>
-                                        setNumPlayerCards((prev) =>
-                                            Math.max(minNumPlayerCards, prev - 1),
-                                        )
-                                    }
-                                >
-                                    <Sub />
-                                </CircleButton>
-                                <LabelInput
-                                    label="# Side Cards"
-                                    type="number"
-                                    value={numPlayerCards()}
-                                    onInput={handleUpdateNumPlayerCards}
-                                />
-                                <CircleButton
-                                    class="translate-y-2"
-                                    onClick={() =>
-                                        setNumPlayerCards((prev) =>
-                                            Math.min(maxNumPlayerCards, prev + 1),
-                                        )
-                                    }
-                                >
-                                    <Add />
-                                </CircleButton>
-                            </div>
-                        </div>
-                        <GrayButton onClick={handleUpdateGame}>Update</GrayButton>
-                    </div>
-                    <DeckGraphic
-                        numCards={gameState().cardState.player.hand.length}
-                        width={cardWidth}
-                        setDeckRef={handleSetDeckRef}
-                    />
-                    <GrayButton
-                        class={twMerge(
-                            "px-8 py-4",
-                            !started() &&
-                                "bg-green-100 border-green-600 text-green-600 hover:bg-green-200",
-                        )}
-                        onClick={startOrTryNewCards}
-                    >
-                        {started() ? "No Matches" : "Start"}
-                    </GrayButton>
-                </div>
+                <Controls
+                    gameState={gameState()}
+                    started={started()}
+                    cardWidth={cardWidth}
+                    numDecks={numDecks()}
+                    numPlayerCards={numPlayerCards()}
+                    updateNumDecks={setNumDecks}
+                    updateNumPlayerCards={setNumPlayerCards}
+                    restartGame={restartGame}
+                    setDeckRef={handleSetDeckRef}
+                    startOrTryNewCards={startOrTryNewCards}
+                    cpuTimeout={cpuMoveTimeout()}
+                    cpu2ndTimeout={cpu2ndMoveTimeout()}
+                    setCpuTimeout={setCpuMoveTimeout}
+                    setCpu2ndTimeout={setCpu2ndMoveTimeout}
+                    setNewTimeoutValues={handleSetNewTimeoutValues}
+                />
                 <div class="absolute left-4 bottom-4 text-5xl z-3000">
                     {gameState().cardState.player.hand.length}
                 </div>

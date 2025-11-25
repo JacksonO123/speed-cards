@@ -1,19 +1,25 @@
-import { type JSX, splitProps } from "solid-js";
+import { type JSX, splitProps, mergeProps } from "solid-js";
 import { twMerge } from "tailwind-merge";
 
 type LabelInputProps = {
     label: string;
+    labelPosition?: "top" | "bottom";
 } & JSX.InputHTMLAttributes<HTMLInputElement>;
 
 export default function LabelInput(props: LabelInputProps) {
-    const [classProp, otherProps] = splitProps(props, ["class"]);
+    const merged = mergeProps({ labelPosition: "top" }, props);
+    const [classProp, otherProps] = splitProps(merged, ["class"]);
     const inputId = crypto.randomUUID();
+
+    const Label = () => (
+        <label for={inputId} class="text-neutral-800 text-xs font-semibold">
+            {props.label}
+        </label>
+    );
 
     return (
         <div class="flex flex-col">
-            <label for={inputId} class="text-neutral-800 text-xs font-semibold">
-                {props.label}
-            </label>
+            {otherProps.labelPosition === "top" && <Label />}
             <input
                 id={inputId}
                 {...otherProps}
@@ -22,6 +28,7 @@ export default function LabelInput(props: LabelInputProps) {
                     classProp.class,
                 )}
             />
+            {otherProps.labelPosition === "bottom" && <Label />}
         </div>
     );
 }
