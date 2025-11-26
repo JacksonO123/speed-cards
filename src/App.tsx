@@ -51,7 +51,7 @@ function App() {
     const [alerts, addAlert] = useAlerts();
     const [floatInstructions, addFloatInstruction] = useFloatInstr();
 
-    const [pileDispose, setPileDispose] = createSignal<() => void>(() => {});
+    let pileDispose: (() => void) | null = null;
 
     function generateInitial(numDecks: number): GameState {
         const res: GameState = {
@@ -387,7 +387,7 @@ function App() {
         setStarted(false);
         clearTimeout(cpuTimeout());
         setGameState(generateInitial(numDecks()));
-        pileDispose()();
+        pileDispose?.();
         setSideCardEls();
     }
 
@@ -437,7 +437,7 @@ function App() {
                 setPlayerCardEls(res);
             }
 
-            setPileDispose(() => dispose);
+            pileDispose = dispose;
         });
     }
 
